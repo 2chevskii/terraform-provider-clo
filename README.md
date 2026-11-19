@@ -1,76 +1,56 @@
-Terraform CLO Provider
-============================
+# CLO Terraform provider
 
-The CLO provider lets you manage [clo.ru](https://clo.ru) cloud resources —
-compute instances, disks, networking (including load balancers), managed
-databases, and S3 storage — with Terraform.
+This fork manages compute, disks, networking, projects, limits, managed databases, licenses and S3 users through the CLO v2 HTTP API. The provider exposes 22 resources and 48 data sources. Configuration, examples and import formats are in the [resource reference](docs/resources) and [data source reference](docs/data-sources). The [coverage report](API-COVERAGE.md) compares the fork with upstream v2.8.0.
 
-Documentation: [registry.terraform.io](https://registry.terraform.io/providers/clo-ru/clo/latest/docs)
+## Install this fork from source
 
-Requirements
-------------
+The following PowerShell commands build and install a local development version on Windows x64. Run them from the cloned fork with Go 1.25 or newer and Terraform installed. The local provider address is `2chevskii/clo`.
 
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [Go](https://golang.org/doc/install) 1.25 (to build the provider plugin)
+```powershell
+$version = "2.8.1-dev.0"
+$mirror = Join-Path $env:LOCALAPPDATA "clo-terraform/mirror"
+$package = Join-Path $mirror "registry.terraform.io/2chevskii/clo/$version/windows_amd64"
+New-Item -ItemType Directory -Force $package | Out-Null
+go build -o (Join-Path $package "terraform-provider-clo_v$version.exe") .
 
-Using the Provider
--------------------
+$env:TF_CLI_CONFIG_FILE = Join-Path $env:LOCALAPPDATA "clo-terraform/terraform.rc"
+$mirrorPath = $mirror.Replace('\', '/')
+@"
+provider_installation {
+  filesystem_mirror {
+    path = "$mirrorPath"
+    include = ["registry.terraform.io/2chevskii/clo"]
+  }
+  direct {
+    exclude = ["registry.terraform.io/2chevskii/clo"]
+  }
+}
+"@ | Set-Content -Encoding ascii $env:TF_CLI_CONFIG_FILE
+```
+
+The CLI configuration applies to the current shell. If you already use a Terraform CLI configuration, you can merge the installation rules into that file. On other platforms, build the same Go package and use the corresponding Terraform platform directory and executable name.
+
+## Configure Terraform
+
+Place this configuration in a Terraform working directory. Set `CLO_API_AUTH_TOKEN` in the environment and run `terraform init`. The sample reads the projects visible to the token.
 
 ```hcl
 terraform {
   required_providers {
     clo = {
-      source = "clo-ru/clo"
+      source  = "2chevskii/clo"
+      version = "2.8.1-dev.0"
     }
   }
 }
 
 provider "clo" {
   auth_url = "https://api.clo.ru"
-  # token may also be supplied via the CLO_API_AUTH_TOKEN environment variable
-  token = "<your-api-token>"
 }
+
+data "clo_projects" "available" {}
 ```
 
-Supported Resources
--------------------
+## Test the provider
 
-- **Compute**: `clo_compute_instance`, `clo_compute_instance_power`, `clo_compute_keypair`, `clo_compute_snapshot`, `clo_compute_snapshot_restore`
-- **Disks**: `clo_disks_volume`, `clo_disks_volume_attach`
-- **Network**: `clo_network_ip`, `clo_network_ip_attach`, `clo_network_vrouter`, `clo_network_loadbalancer`, `clo_network_loadbalancer_rule`
-- **Database**: `clo_dbaas_cluster`, `clo_dbaas_database`, `clo_dbaas_backup`
-- **Storage**: `clo_storage_s3_user`, `clo_storage_s3_user_keys`
-
-Data Sources
-------------
-
-- **Project**: `clo_projects`, `clo_project_image`, `clo_project_images`, `clo_project_recipe`, `clo_project_recipes`
-- **Compute**: `clo_compute_instance`, `clo_compute_instances`, `clo_compute_keypair`, `clo_compute_keypairs`, `clo_compute_snapshots`
-- **Disks**: `clo_disks_volume`, `clo_disks_volumes`
-- **Network**: `clo_network_ip`, `clo_network_ips`, `clo_network_vrouters`, `clo_network_loadbalancers`, `clo_network_loadbalancer_rules`
-- **Database**: `clo_dbaas_clusters`, `clo_dbaas_cluster_config`, `clo_dbaas_databases`, `clo_dbaas_nodes`, `clo_dbaas_datastores`, `clo_dbaas_backups`, `clo_dbaas_backup_download`
-- **Storage**: `clo_storage_s3_user`, `clo_storage_s3_users`, `clo_storage_s3_user_keys`
-
-Building The Provider
----------------------
-
-Clone the repository:
-
-```sh
-git clone git@github.com:clo-ru/terraform-provider-clo.git
-```
-
-Enter the provider directory and build:
-
-```sh
-cd terraform-provider-clo
-make build
-```
-
-Run unit tests with `make test`. Acceptance tests exercise the live API, are
-gated behind `TF_ACC`, and require `CLO_API_AUTH_URL`, `CLO_API_AUTH_TOKEN`, and
-`CLO_API_PROJECT_ID`:
-
-```sh
-make testacc
-```
+Run `go test ./...` and `go vet ./...` from the repository root. Local tests use HTTP fixtures. The acceptance suite creates and deletes CLO infrastructure and requires `TF_ACC=1`, `CLO_API_AUTH_URL`, `CLO_API_AUTH_TOKEN`, and a disposable `CLO_API_PROJECT_ID`.

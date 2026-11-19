@@ -1,20 +1,15 @@
-# Define required providers
 terraform {
   required_providers {
     clo = {
-      version = "2.8.0"
-      source  = "clo-ru/clo"
+      source  = "2chevskii/clo"
+      version = "2.8.1-dev.0"
     }
   }
 }
 
-# Configure the provider
 provider "clo" {
   auth_url = "https://api.clo.ru"
-  token    = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9."
+  # Set CLO_API_AUTH_TOKEN in the process environment.
 }
 
-# Create an instance
-resource "clo_compute_instance" "test-server" {
-  # ...
-}
+data "clo_projects" "available" {}

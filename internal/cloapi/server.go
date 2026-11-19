@@ -105,17 +105,17 @@ func serverFromSchema(r *gen.ServerSchema) Server {
 
 // ServerStorage describes a disk to attach to a server on create.
 type ServerStorage struct {
-	Bootable    bool
+	Bootable    *bool
 	StorageType string
 	Size        int
 }
 
 // ServerAddress describes an address to attach to a server on create.
 type ServerAddress struct {
-	External       bool
-	Version        int
+	External       *bool
+	Version        *int
 	AddressID      string
-	DdosProtection bool
+	DdosProtection *bool
 	Bandwidth      int
 }
 
@@ -174,15 +174,16 @@ func (c *Client) CreateServer(ctx context.Context, p ServerCreateParams) (string
 			StorageType *string `json:"storage_type,omitempty"`
 		}, len(p.Storages))
 		for i, s := range p.Storages {
-			bootable, st := s.Bootable, s.StorageType
-			storages[i].Bootable = &bootable
+			storages[i].Bootable = s.Bootable
 			storages[i].Size = s.Size
-			storages[i].StorageType = &st
+			if s.StorageType != "" {
+				storages[i].StorageType = &s.StorageType
+			}
 		}
 		body.Storages = &storages
 	}
 
-	if len(p.Addresses) > 0 {
+	if p.Addresses != nil {
 		addrs := make([]struct {
 			AddressId        *string                                            `json:"address_id,omitempty"`
 			BandwidthMaxMbps *gen.ServerCreateJSONBodyAddressesBandwidthMaxMbps `json:"bandwidth_max_mbps,omitempty"`
@@ -191,10 +192,9 @@ func (c *Client) CreateServer(ctx context.Context, p ServerCreateParams) (string
 			Version          *int                                               `json:"version,omitempty"`
 		}, len(p.Addresses))
 		for i, a := range p.Addresses {
-			external, ddos, version := a.External, a.DdosProtection, a.Version
-			addrs[i].External = &external
-			addrs[i].DdosProtection = &ddos
-			addrs[i].Version = &version
+			addrs[i].External = a.External
+			addrs[i].DdosProtection = a.DdosProtection
+			addrs[i].Version = a.Version
 			if a.AddressID != "" {
 				id := a.AddressID
 				addrs[i].AddressId = &id

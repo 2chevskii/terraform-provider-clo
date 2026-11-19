@@ -2,7 +2,7 @@ package clo
 
 import (
 	"context"
-
+	"errors"
 	"time"
 
 	"github.com/clo-ru/terraform-provider-clo/v2/internal/cloapi"
@@ -83,12 +83,12 @@ func resourceInstance() *schema.Resource {
 						"bootable": {
 							Description: "Is the disk bootable",
 							Type:        schema.TypeBool,
-							Required:    true,
+							Optional:    true,
 						},
 						"storage_type": {
 							Description: "Storage type of the new disk. Could be `volume` or `local`",
 							Type:        schema.TypeString,
-							Required:    true,
+							Optional:    true,
 						},
 						"size": {
 							Description: "Requested size of the new disk",
@@ -98,7 +98,8 @@ func resourceInstance() *schema.Resource {
 					},
 				},
 			},
-			"addresses": {
+			"no_addresses": {Type: schema.TypeBool, Optional: true, ForceNew: true, Description: "Send an empty address list during server creation. By default CLO chooses the addresses when no address blocks are present.", ConflictsWith: []string{"addresses"}},
+			"addresses": {ConflictsWith: []string{"no_addresses"},
 				Description: "Addresses for the new instance",
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -107,13 +108,13 @@ func resourceInstance() *schema.Resource {
 						"external": {
 							Description: "Should the new address be the external one",
 							Type:        schema.TypeBool,
-							Required:    true,
+							Optional:    true,
 							ForceNew:    true,
 						},
 						"version": {
 							Description: "Version of the new address. Could be `4` or `6`",
 							Type:        schema.TypeInt,
-							Required:    true,
+							Optional:    true,
 							ForceNew:    true,
 						},
 						"address_id": {
@@ -125,7 +126,7 @@ func resourceInstance() *schema.Resource {
 						"ddos_protection": {
 							Description: "Should the new address be protected from DDoS",
 							Type:        schema.TypeBool,
-							Required:    true,
+							Optional:    true,
 							ForceNew:    true,
 						},
 						"bandwidth": {
@@ -160,12 +161,15 @@ func resourceInstance() *schema.Resource {
 					},
 					"name": {
 						Type:     schema.TypeString,
-						Optional: true,
+						Required: true,
 					},
 					"value": {
-						Deprecated: "The CLO API ignores this field. Remove it from configuration.",
-						Type:       schema.TypeInt,
-						Optional:   true,
+						Deprecated: "Set value on clo_compute_instance_license. The server creation endpoint accepts only addon and name.",
+						ValidateFunc: func(interface{}, string) ([]string, []error) {
+							return nil, []error{errors.New("use clo_compute_instance_license to set a license value")}
+						},
+						Type:     schema.TypeInt,
+						Optional: true,
 					},
 				}},
 			},
@@ -328,14 +332,15 @@ func buildInstanceStorages(d *schema.ResourceData) []cloapi.ServerStorage {
 		return nil
 	}
 	var out []cloapi.ServerStorage
-	for _, stor := range v.([]any) {
+	for i, stor := range v.([]any) {
 		m := stor.(map[string]any)
 		s := cloapi.ServerStorage{}
 		if x, ok := m["size"]; ok {
 			s.Size = x.(int)
 		}
-		if x, ok := m["bootable"]; ok {
-			s.Bootable = x.(bool)
+		if configuredBlockField(d, "block_device", i, "bootable") {
+			value := m["bootable"].(bool)
+			s.Bootable = &value
 		}
 		if x, ok := m["storage_type"]; ok {
 			s.StorageType = x.(string)
@@ -346,25 +351,28 @@ func buildInstanceStorages(d *schema.ResourceData) []cloapi.ServerStorage {
 }
 
 func buildInstanceAddresses(d *schema.ResourceData) []cloapi.ServerAddress {
-	v, ok := d.GetOk("addresses")
-	if !ok {
+	entries := d.Get("addresses").([]interface{})
+	if len(entries) == 0 && !d.Get("no_addresses").(bool) {
 		return nil
 	}
-	var out []cloapi.ServerAddress
-	for _, adr := range v.([]any) {
+	out := make([]cloapi.ServerAddress, 0, len(entries))
+	for i, adr := range entries {
 		m := adr.(map[string]any)
 		a := cloapi.ServerAddress{}
-		if x, ok := m["external"]; ok {
-			a.External = x.(bool)
+		if configuredBlockField(d, "addresses", i, "external") {
+			value := m["external"].(bool)
+			a.External = &value
 		}
 		if x, ok := m["address_id"]; ok {
 			a.AddressID = x.(string)
 		}
-		if x, ok := m["version"]; ok {
-			a.Version = x.(int)
+		if configuredBlockField(d, "addresses", i, "version") {
+			value := m["version"].(int)
+			a.Version = &value
 		}
-		if x, ok := m["ddos_protection"]; ok {
-			a.DdosProtection = x.(bool)
+		if configuredBlockField(d, "addresses", i, "ddos_protection") {
+			value := m["ddos_protection"].(bool)
+			a.DdosProtection = &value
 		}
 		if x, ok := m["bandwidth"]; ok {
 			a.Bandwidth = x.(int)
@@ -372,6 +380,24 @@ func buildInstanceAddresses(d *schema.ResourceData) []cloapi.ServerAddress {
 		out = append(out, a)
 	}
 	return out
+}
+
+// SDKv2 fills omitted scalar fields with zero values. Inspect the configuration
+// to distinguish an omitted boolean from an explicit false in the API request.
+func configuredBlockField(d *schema.ResourceData, block string, index int, key string) bool {
+	raw := d.GetRawConfig()
+	if raw.IsNull() {
+		return false
+	}
+	items := raw.GetAttr(block)
+	if !items.IsKnown() {
+		return true
+	}
+	if items.IsNull() {
+		return false
+	}
+	elements := items.AsValueSlice()
+	return index < len(elements) && !elements[index].GetAttr(key).IsNull()
 }
 
 // Waiters

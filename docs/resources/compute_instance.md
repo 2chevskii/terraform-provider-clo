@@ -53,6 +53,7 @@ resource "clo_compute_instance" "myserv" {
 - `image_id` (String) Operating system image ID.
 - `keypairs` (List of String) The list contains the SSH-keypairs IDs
 - `licenses` (Block List) The list contains licences that should be ordered with the instance (see [below for nested schema](#nestedblock--licenses))
+- `no_addresses` (Boolean) Send an empty address list during server creation. By default CLO chooses the addresses when no address blocks are present.
 - `password` (String, Sensitive) Password for the new instance
 - `recipe_id` (String) ID of the recipe that will be installed on the instance
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -69,16 +70,13 @@ resource "clo_compute_instance" "myserv" {
 <a id="nestedblock--addresses"></a>
 ### Nested Schema for `addresses`
 
-Required:
-
-- `ddos_protection` (Boolean) Should the new address be protected from DDoS
-- `external` (Boolean) Should the new address be the external one
-- `version` (Number) Version of the new address. Could be `4` or `6`
-
 Optional:
 
 - `address_id` (String) Use an existing IP with a provided ID
 - `bandwidth` (Number) Max address bandwidth, must be 100 or 1024
+- `ddos_protection` (Boolean) Should the new address be protected from DDoS
+- `external` (Boolean) Should the new address be the external one
+- `version` (Number) Version of the new address. Could be `4` or `6`
 
 
 <a id="nestedblock--block_device"></a>
@@ -86,8 +84,11 @@ Optional:
 
 Required:
 
-- `bootable` (Boolean) Is the disk bootable
 - `size` (Number) Requested size of the new disk
+
+Optional:
+
+- `bootable` (Boolean) Is the disk bootable
 - `storage_type` (String) Storage type of the new disk. Could be `volume` or `local`
 
 
@@ -107,10 +108,10 @@ Optional:
 Required:
 
 - `addon` (String)
+- `name` (String)
 
 Optional:
 
-- `name` (String)
 - `value` (Number, Deprecated)
 
 

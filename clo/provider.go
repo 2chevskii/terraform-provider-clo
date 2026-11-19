@@ -20,14 +20,14 @@ func Provider() *schema.Provider {
 			"auth_url": {
 				Description: "URI for CLO API. May also be provided via CLO_API_AUTH_URL environment variable.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CLO_API_AUTH_URL", nil),
 			},
 			"token": {
 				Description: "JWT token. Should be issued in user area. " +
 					"May also be provided via CLO_API_AUTH_TOKEN environment variable.",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CLO_API_AUTH_TOKEN", nil),
 			},
 		},

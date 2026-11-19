@@ -61,14 +61,15 @@ func getTestRecipe(t *testing.T, cli *cloapi.Client) (cloapi.Recipe, string) {
 
 // Server
 func buildTestServer(cli *cloapi.Client, t *testing.T) (string, error) {
+	bootable, external, version := true, false, 4
 	id, err := cli.CreateServer(context.Background(), cloapi.ServerCreateParams{
 		ProjectID:   getTestProject(),
 		Name:        "testServer",
 		ImageID:     getTestImageID(t, cli),
 		FlavorRam:   2,
 		FlavorVcpus: 1,
-		Storages:    []cloapi.ServerStorage{{Bootable: true, StorageType: "local", Size: 10}},
-		Addresses:   []cloapi.ServerAddress{{External: false, Version: 4}},
+		Storages:    []cloapi.ServerStorage{{Bootable: &bootable, StorageType: "local", Size: 10}},
+		Addresses:   []cloapi.ServerAddress{{External: &external, Version: &version}},
 	})
 	if err != nil {
 		return "", err
