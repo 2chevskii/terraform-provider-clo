@@ -27,7 +27,10 @@ func dataSourceProjects() *schema.Resource {
 						"name": {
 							Description: "Name of the project",
 							Type:        schema.TypeString, Computed: true},
-						"status": {Type: schema.TypeString, Computed: true},
+						"switch_status": computedField(schema.TypeString),
+						"display_name":  computedField(schema.TypeString),
+						"description":   computedField(schema.TypeString),
+						"status":        {Type: schema.TypeString, Computed: true},
 						"created_in": {
 							Description: "Timestamp the project was created",
 							Type:        schema.TypeString, Computed: true},
@@ -61,9 +64,9 @@ func flattenProjectResults(pr []cloapi.Project) []interface{} {
 	res := make([]interface{}, 0, len(pr))
 	for _, p := range pr {
 		res = append(res, map[string]interface{}{
-			"id":              p.ID,
-			"name":            p.Name,
-			"status":          p.Status,
+			"id":     p.ID,
+			"name":   p.Name,
+			"status": p.Status, "switch_status": p.SwitchStatus, "display_name": p.DisplayName, "description": p.Description,
 			"has_abuse":       p.HasAbuse,
 			"created_in":      p.CreatedIn,
 			"stopping_reason": p.StoppingReason,
