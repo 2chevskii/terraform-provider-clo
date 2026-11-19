@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -189,38 +190,48 @@ func (c *Client) GetCluster(ctx context.Context, id string) (*Cluster, error) {
 	return &cl, nil
 }
 
-// ListClusters returns the project's dbaas clusters (single page, matching the other list adapters).
-func (c *Client) ListClusters(ctx context.Context, projectID string) ([]Cluster, error) {
-	resp, err := c.gen.DbaasClustersListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Cluster, 0, len(items))
-	for i := range items {
-		out = append(out, clusterFromSchema(&items[i]))
-	}
-	return out, nil
+// ListClusters returns the project's dbaas clusters.
+func (c *Client) ListClusters(ctx context.Context, projectID string, options *ListOptions) ([]Cluster, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Cluster, int, error) {
+		resp, err := c.gen.DbaasClustersListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListClusters response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Cluster, 0, len(items))
+		for i := range items {
+			out = append(out, clusterFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // ListDatastores returns the dbaas engine offerings available in the project.
-func (c *Client) ListDatastores(ctx context.Context, projectID string) ([]Datastore, error) {
-	resp, err := c.gen.ProjectDbaasDatastoresWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Datastore, 0, len(items))
-	for i := range items {
-		out = append(out, datastoreFromSchema(&items[i]))
-	}
-	return out, nil
+func (c *Client) ListDatastores(ctx context.Context, projectID string, options *ListOptions) ([]Datastore, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Datastore, int, error) {
+		resp, err := c.gen.ProjectDbaasDatastoresWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListDatastores response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Datastore, 0, len(items))
+		for i := range items {
+			out = append(out, datastoreFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // GetClusterConfig returns the cluster's current, default and last-stable
@@ -242,20 +253,25 @@ func (c *Client) GetClusterConfig(ctx context.Context, clusterID string) (*Clust
 }
 
 // ListNodes returns the cluster's member nodes.
-func (c *Client) ListNodes(ctx context.Context, clusterID string) ([]Node, error) {
-	resp, err := c.gen.ClusterDbaasNodesListWithResponse(ctx, clusterID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Node, 0, len(items))
-	for i := range items {
-		out = append(out, nodeFromSchema(&items[i]))
-	}
-	return out, nil
+func (c *Client) ListNodes(ctx context.Context, clusterID string, options *ListOptions) ([]Node, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Node, int, error) {
+		resp, err := c.gen.ClusterDbaasNodesListWithResponse(ctx, clusterID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListNodes response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Node, 0, len(items))
+		for i := range items {
+			out = append(out, nodeFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // RenameCluster changes the cluster's name.

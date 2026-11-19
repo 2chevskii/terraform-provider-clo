@@ -15,6 +15,8 @@ func dataSourceLoadBalancerRules() *schema.Resource {
 		Description: "Fetches the list of listener rules on a load balancer",
 		ReadContext: dataSourceLoadBalancerRulesRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"loadbalancer_id": {
 				Description: "ID of the load balancer that owns the rules",
 				Type:        schema.TypeString,
@@ -70,8 +72,12 @@ func dataSourceLoadBalancerRules() *schema.Resource {
 
 func dataSourceLoadBalancerRulesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	rules, err := cli.ListRules(ctx, d.Get("loadbalancer_id").(string))
+	options := listOptions(d)
+	rules, err := cli.ListRules(ctx, d.Get("loadbalancer_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenLoadBalancerRulesResults(rules)); e != nil {

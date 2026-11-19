@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -81,21 +82,26 @@ func (c *Client) GetAddress(ctx context.Context, id string) (*Address, error) {
 	return &a, nil
 }
 
-// ListAddresses returns the project's addresses (single page, matching v2 behavior).
-func (c *Client) ListAddresses(ctx context.Context, projectID string) ([]Address, error) {
-	resp, err := c.gen.ProjectAddressesListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Address, 0, len(items))
-	for i := range items {
-		out = append(out, addressFromSchema(&items[i]))
-	}
-	return out, nil
+// ListAddresses returns the project's addresses.
+func (c *Client) ListAddresses(ctx context.Context, projectID string, options *ListOptions) ([]Address, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Address, int, error) {
+		resp, err := c.gen.ProjectAddressesListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListAddresses response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Address, 0, len(items))
+		for i := range items {
+			out = append(out, addressFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // DeleteAddress deletes the address.

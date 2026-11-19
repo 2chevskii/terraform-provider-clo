@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	gen "github.com/clo-ru/cloapi-go-client/v3"
 	"time"
 )
@@ -20,21 +21,26 @@ type Project struct {
 	HasAbuse       bool
 }
 
-// ListProjects returns the account's projects (single page, matching v2 behavior).
-func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
-	resp, err := c.gen.ProjectListWithResponse(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Project, 0, len(items))
-	for _, p := range items {
-		out = append(out, projectFromSchema(p))
-	}
-	return out, nil
+// ListProjects returns the account's projects.
+func (c *Client) ListProjects(ctx context.Context, options *ListOptions) ([]Project, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Project, int, error) {
+		resp, err := c.gen.ProjectListWithResponse(ctx, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListProjects response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Project, 0, len(items))
+		for _, p := range items {
+			out = append(out, projectFromSchema(p))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 func projectFromSchema(p gen.ProjectDetailSchema) Project {

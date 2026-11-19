@@ -25,10 +25,15 @@ data "clo_project_images" "all_images" {
 
 - `project_id` (String) ID of the project that owns images
 
+### Optional
+
+- `query` (Map of String) API query parameters, including filters and order where supported. Set limit or offset to read a single page.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 - `result` (List of Object) The object that holds the results (see [below for nested schema](#nestedatt--result))
+- `total_count` (Number)
 
 <a id="nestedatt--result"></a>
 ### Nested Schema for `result`

@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -59,21 +60,26 @@ func (c *Client) GetSnapshot(ctx context.Context, id string) (*Snapshot, error) 
 	return &s, nil
 }
 
-// ListSnapshots returns the project's snapshots (single page, matching the other list adapters).
-func (c *Client) ListSnapshots(ctx context.Context, projectID string) ([]Snapshot, error) {
-	resp, err := c.gen.SnapshotsListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Snapshot, 0, len(items))
-	for i := range items {
-		out = append(out, snapshotFromSchema(&items[i]))
-	}
-	return out, nil
+// ListSnapshots returns the project's snapshots.
+func (c *Client) ListSnapshots(ctx context.Context, projectID string, options *ListOptions) ([]Snapshot, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Snapshot, int, error) {
+		resp, err := c.gen.SnapshotsListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListSnapshots response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Snapshot, 0, len(items))
+		for i := range items {
+			out = append(out, snapshotFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // DeleteSnapshot deletes a snapshot.

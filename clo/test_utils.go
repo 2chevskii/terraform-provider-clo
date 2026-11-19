@@ -25,7 +25,7 @@ func getTestProject() string {
 // available one.
 func getTestImageID(t *testing.T, cli *cloapi.Client) string {
 	t.Helper()
-	images, err := cli.ListImages(context.Background(), getTestProject())
+	images, err := cli.ListImages(context.Background(), getTestProject(), nil)
 	if err != nil {
 		t.Fatalf("list images: %v", err)
 	}
@@ -46,7 +46,7 @@ func getTestImageID(t *testing.T, cli *cloapi.Client) string {
 // Recipes are environment-specific, so the test is skipped when none qualifies.
 func getTestRecipe(t *testing.T, cli *cloapi.Client) (cloapi.Recipe, string) {
 	t.Helper()
-	recipes, err := cli.ListRecipes(context.Background(), getTestProject())
+	recipes, err := cli.ListRecipes(context.Background(), getTestProject(), nil)
 	if err != nil {
 		t.Fatalf("list recipes: %v", err)
 	}
@@ -228,7 +228,7 @@ func destroyTestKeypair(id string, cli *cloapi.Client) error {
 // environment-specific, so the test is skipped when none is available.
 func getTestDatastore(t *testing.T, cli *cloapi.Client) string {
 	t.Helper()
-	datastores, err := cli.ListDatastores(context.Background(), getTestProject())
+	datastores, err := cli.ListDatastores(context.Background(), getTestProject(), nil)
 	if err != nil {
 		t.Fatalf("list datastores: %v", err)
 	}

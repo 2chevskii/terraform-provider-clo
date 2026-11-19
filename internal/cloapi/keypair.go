@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -75,21 +76,26 @@ func (c *Client) GetKeypair(ctx context.Context, id string) (*Keypair, error) {
 	return &k, nil
 }
 
-// ListKeypairs returns the project's keypairs (single page, matching the other list adapters).
-func (c *Client) ListKeypairs(ctx context.Context, projectID string) ([]Keypair, error) {
-	resp, err := c.gen.KeyPairsListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Keypair, 0, len(items))
-	for i := range items {
-		out = append(out, keypairFromSchema(&items[i]))
-	}
-	return out, nil
+// ListKeypairs returns the project's keypairs.
+func (c *Client) ListKeypairs(ctx context.Context, projectID string, options *ListOptions) ([]Keypair, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Keypair, int, error) {
+		resp, err := c.gen.KeyPairsListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListKeypairs response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Keypair, 0, len(items))
+		for i := range items {
+			out = append(out, keypairFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // DeleteKeypair deletes a keypair.

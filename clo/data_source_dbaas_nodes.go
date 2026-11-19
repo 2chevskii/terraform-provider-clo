@@ -14,6 +14,8 @@ func dataSourceDbaasNodes() *schema.Resource {
 		Description: "Fetches the list of nodes in a dbaas cluster",
 		ReadContext: dataSourceDbaasNodesRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"cluster_id": {
 				Description: "ID of the dbaas cluster that owns the nodes",
 				Type:        schema.TypeString,
@@ -41,8 +43,12 @@ func dataSourceDbaasNodes() *schema.Resource {
 
 func dataSourceDbaasNodesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	nodes, err := cli.ListNodes(ctx, d.Get("cluster_id").(string))
+	options := listOptions(d)
+	nodes, err := cli.ListNodes(ctx, d.Get("cluster_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	res := make([]interface{}, 0, len(nodes))

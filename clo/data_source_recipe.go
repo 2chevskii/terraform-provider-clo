@@ -54,7 +54,7 @@ func dataSourceRecipe() *schema.Resource {
 
 func dataSourceRecipeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	recipes, err := cli.ListRecipes(ctx, d.Get("project_id").(string))
+	recipes, err := cli.ListRecipes(ctx, d.Get("project_id").(string), nil)
 	if err != nil {
 		return diag.FromErr(err)
 	}

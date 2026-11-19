@@ -14,6 +14,8 @@ func dataSourceVrouters() *schema.Resource {
 		Description: "Fetches the list of virtual routers in the project",
 		ReadContext: dataSourceVroutersRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns virtual routers",
 				Type:        schema.TypeString,
@@ -65,8 +67,12 @@ func dataSourceVrouters() *schema.Resource {
 
 func dataSourceVroutersRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	vrouters, err := cli.ListVrouters(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	vrouters, err := cli.ListVrouters(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	res := make([]interface{}, 0, len(vrouters))

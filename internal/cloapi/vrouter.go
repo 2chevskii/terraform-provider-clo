@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
 )
@@ -72,21 +73,26 @@ func (c *Client) GetVrouter(ctx context.Context, id string) (*Vrouter, error) {
 	return &v, nil
 }
 
-// ListVrouters returns the project's virtual routers (single page, matching the other list adapters).
-func (c *Client) ListVrouters(ctx context.Context, projectID string) ([]Vrouter, error) {
-	resp, err := c.gen.ProjectVrouterListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Vrouter, 0, len(items))
-	for i := range items {
-		out = append(out, vrouterFromSchema(&items[i]))
-	}
-	return out, nil
+// ListVrouters returns the project's virtual routers.
+func (c *Client) ListVrouters(ctx context.Context, projectID string, options *ListOptions) ([]Vrouter, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Vrouter, int, error) {
+		resp, err := c.gen.ProjectVrouterListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListVrouters response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Vrouter, 0, len(items))
+		for i := range items {
+			out = append(out, vrouterFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // StartVrouter powers the virtual router on.

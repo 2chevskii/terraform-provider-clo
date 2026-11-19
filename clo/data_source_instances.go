@@ -15,6 +15,8 @@ func dataSourceInstances() *schema.Resource {
 		Description: "Fetches the list of the instances",
 		ReadContext: dataSourceInstancesRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns instances",
 				Type:        schema.TypeString,
@@ -101,8 +103,12 @@ func dataSourceInstances() *schema.Resource {
 
 func dataSourceInstancesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	servers, err := cli.ListServers(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	servers, err := cli.ListServers(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenInstancesResults(servers)); e != nil {

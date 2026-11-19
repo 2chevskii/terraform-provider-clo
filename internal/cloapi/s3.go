@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
 )
@@ -133,21 +134,26 @@ func (c *Client) GetS3User(ctx context.Context, id string) (*S3User, error) {
 	return &u, nil
 }
 
-// ListS3Users returns the project's object-storage users (single page, matching v2).
-func (c *Client) ListS3Users(ctx context.Context, projectID string) ([]S3User, error) {
-	resp, err := c.gen.S3UsersListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]S3User, 0, len(items))
-	for i := range items {
-		out = append(out, s3UserFromSchema(&items[i]))
-	}
-	return out, nil
+// ListS3Users returns the project's object-storage users.
+func (c *Client) ListS3Users(ctx context.Context, projectID string, options *ListOptions) ([]S3User, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]S3User, int, error) {
+		resp, err := c.gen.S3UsersListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListS3Users response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]S3User, 0, len(items))
+		for i := range items {
+			out = append(out, s3UserFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // UpdateS3UserName updates the user's human-readable name.

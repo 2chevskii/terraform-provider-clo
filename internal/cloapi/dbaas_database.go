@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -72,28 +73,38 @@ func (c *Client) GetDatabase(ctx context.Context, id string) (*Database, error) 
 	return &db, nil
 }
 
-// ListDatabasesByCluster returns the databases in a cluster (single page, matching the other list adapters).
-func (c *Client) ListDatabasesByCluster(ctx context.Context, clusterID string) ([]Database, error) {
-	resp, err := c.gen.ClusterDbaasDatabasesListWithResponse(ctx, clusterID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil {
-		return nil, nil
-	}
-	return databasesFromList(resp.OK.Result), nil
+// ListDatabasesByCluster returns the databases in a cluster.
+func (c *Client) ListDatabasesByCluster(ctx context.Context, clusterID string, options *ListOptions) ([]Database, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Database, int, error) {
+		resp, err := c.gen.ClusterDbaasDatabasesListWithResponse(ctx, clusterID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListDatabasesByCluster response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		return databasesFromList(resp.OK.Result), resp.OK.Count, nil
+	})
 }
 
-// ListDatabasesByProject returns all dbaas databases in a project (single page).
-func (c *Client) ListDatabasesByProject(ctx context.Context, projectID string) ([]Database, error) {
-	resp, err := c.gen.ProjectDbaasDatabasesListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil {
-		return nil, nil
-	}
-	return databasesFromList(resp.OK.Result), nil
+// ListDatabasesByProject returns all dbaas databases in a project.
+func (c *Client) ListDatabasesByProject(ctx context.Context, projectID string, options *ListOptions) ([]Database, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Database, int, error) {
+		resp, err := c.gen.ProjectDbaasDatabasesListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListDatabasesByProject response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		return databasesFromList(resp.OK.Result), resp.OK.Count, nil
+	})
 }
 
 func databasesFromList(items *[]gen.DbaasDatababaseSchema) []Database {

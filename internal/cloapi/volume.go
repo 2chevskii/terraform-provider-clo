@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -85,21 +86,26 @@ func (c *Client) GetVolume(ctx context.Context, id string) (*Volume, error) {
 	return &v, nil
 }
 
-// ListVolumes returns the project's volumes (single page, matching v2 behavior).
-func (c *Client) ListVolumes(ctx context.Context, projectID string) ([]Volume, error) {
-	resp, err := c.gen.ProjectVolumesListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Volume, 0, len(items))
-	for i := range items {
-		out = append(out, volumeFromSchema(&items[i]))
-	}
-	return out, nil
+// ListVolumes returns the project's volumes.
+func (c *Client) ListVolumes(ctx context.Context, projectID string, options *ListOptions) ([]Volume, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Volume, int, error) {
+		resp, err := c.gen.ProjectVolumesListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListVolumes response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Volume, 0, len(items))
+		for i := range items {
+			out = append(out, volumeFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // AttachVolume attaches the volume to a server.

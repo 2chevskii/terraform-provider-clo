@@ -15,6 +15,8 @@ func dataSourceVolumes() *schema.Resource {
 		Description: "Fetches the list of volumes",
 		ReadContext: dataSourceVolumesRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns volumes",
 				Type:        schema.TypeString,
@@ -60,8 +62,12 @@ func dataSourceVolumes() *schema.Resource {
 
 func dataSourceVolumesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	volumes, err := cli.ListVolumes(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	volumes, err := cli.ListVolumes(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenVolumesResults(volumes)); e != nil {

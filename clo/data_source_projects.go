@@ -15,6 +15,8 @@ func dataSourceProjects() *schema.Resource {
 		Description: "Fetches the list of the projects",
 		ReadContext: dataSourceProjectsRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"result": {
 				Description: "The object that holds the results",
 				Type:        schema.TypeList,
@@ -49,8 +51,12 @@ func dataSourceProjects() *schema.Resource {
 
 func dataSourceProjectsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	projects, err := cli.ListProjects(ctx)
+	options := listOptions(d)
+	projects, err := cli.ListProjects(ctx, options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenProjectResults(projects)); e != nil {

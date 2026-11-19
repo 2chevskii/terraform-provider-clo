@@ -14,6 +14,8 @@ func dataSourceKeypairs() *schema.Resource {
 		Description: "Fetches the list of keypairs in the project",
 		ReadContext: dataSourceKeypairsRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns keypairs",
 				Type:        schema.TypeString,
@@ -54,8 +56,12 @@ func dataSourceKeypairs() *schema.Resource {
 
 func dataSourceKeypairsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	keypairs, err := cli.ListKeypairs(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	keypairs, err := cli.ListKeypairs(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	res := make([]interface{}, 0, len(keypairs))

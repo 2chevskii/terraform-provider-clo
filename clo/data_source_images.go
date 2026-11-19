@@ -14,6 +14,8 @@ func dataSourceImages() *schema.Resource {
 		Description: "Fetches the list of the OS images",
 		ReadContext: dataSourceImagesRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns images",
 				Type:        schema.TypeString,
@@ -59,8 +61,12 @@ func dataSourceImages() *schema.Resource {
 
 func dataSourceImagesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	images, err := cli.ListImages(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	images, err := cli.ListImages(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	res := make([]interface{}, 0, len(images))

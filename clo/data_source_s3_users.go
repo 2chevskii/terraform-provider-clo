@@ -15,6 +15,8 @@ func dataSourceS3Users() *schema.Resource {
 		Description: "Fetches the list of users of the object storage",
 		ReadContext: dataSourceS3UsersRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns users",
 				Type:        schema.TypeString,
@@ -70,8 +72,12 @@ func dataSourceS3Users() *schema.Resource {
 
 func dataSourceS3UsersRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	users, err := cli.ListS3Users(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	users, err := cli.ListS3Users(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenS3UsersResults(users)); e != nil {

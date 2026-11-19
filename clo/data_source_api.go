@@ -20,13 +20,23 @@ func recordFields(fields map[string]*schema.Schema) *schema.Schema {
 	return &schema.Schema{Type: schema.TypeList, Computed: true, Elem: &schema.Resource{Schema: fields}}
 }
 
+func listQuerySchema() *schema.Schema {
+	return &schema.Schema{Type: schema.TypeMap, Optional: true, Elem: &schema.Schema{Type: schema.TypeString}, Description: "API query parameters, including filters and order where supported. Set limit or offset to read a single page."}
+}
+func listOptions(d *schema.ResourceData) *cloapi.ListOptions {
+	query := map[string]string{}
+	for key, value := range d.Get("query").(map[string]interface{}) {
+		query[key] = value.(string)
+	}
+	return &cloapi.ListOptions{Query: query}
+}
 func apiDataSource(operation, scope, description string, collection, enveloped bool, result *schema.Schema) *schema.Resource {
 	fields := map[string]*schema.Schema{"result": result}
 	if scope != "" {
 		fields[scope] = &schema.Schema{Type: schema.TypeString, Required: true, Description: "CLO object ID used by this lookup."}
 	}
 	if collection {
-		fields["query"] = &schema.Schema{Type: schema.TypeMap, Optional: true, Elem: &schema.Schema{Type: schema.TypeString}, Description: "API query parameters, including filters and order where supported. Set limit or offset to read a single page."}
+		fields["query"] = listQuerySchema()
 		fields["total_count"] = computedField(schema.TypeInt)
 	}
 	return &schema.Resource{Description: description, Schema: fields, ReadContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -63,56 +73,43 @@ func apiDataSource(operation, scope, description string, collection, enveloped b
 }
 
 func readQuery(ctx context.Context, cli *cloapi.Client, operation, id string, query map[string]string, collection, enveloped bool) ([]map[string]interface{}, int, error) {
-	_, hasLimit := query["limit"]
-	_, hasOffset := query["offset"]
-	rows := []map[string]interface{}{}
-	var previousPage []byte
-	for {
-		body, err := cli.Query(ctx, operation, id, query)
-		if err != nil {
-			return nil, 0, err
-		}
-		data := json.RawMessage(body)
-		count := 0
-		if enveloped {
-			var envelope struct {
-				Result json.RawMessage
+	if collection {
+		options := &cloapi.ListOptions{Query: query}
+		rows, err := cloapi.CollectPages(ctx, options, func(params map[string]string) ([]map[string]interface{}, int, error) {
+			body, err := cli.Query(ctx, operation, id, params)
+			if err != nil {
+				return nil, 0, err
+			}
+			var page struct {
 				Count  int
+				Result []map[string]interface{}
 			}
-			if err := json.Unmarshal(data, &envelope); err != nil {
+			if err := decodeQueryJSON(body, &page); err != nil {
 				return nil, 0, err
 			}
-			data = envelope.Result
-			count = envelope.Count
-		}
-		if !collection {
-			var row map[string]interface{}
-			if err := decodeQueryJSON(data, &row); err != nil {
-				return nil, 0, err
-			}
-			if row == nil {
-				return nil, 0, fmt.Errorf("%s returned an empty object", operation)
-			}
-			return []map[string]interface{}{row}, 1, nil
-		}
-		var page []map[string]interface{}
-		if err := decodeQueryJSON(data, &page); err != nil {
+			return page.Result, page.Count, nil
+		})
+		return rows, options.Total, err
+	}
+	body, err := cli.Query(ctx, operation, id, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	if enveloped {
+		var envelope struct{ Result json.RawMessage }
+		if err := json.Unmarshal(body, &envelope); err != nil {
 			return nil, 0, err
 		}
-		if previousPage != nil && bytes.Equal(data, previousPage) {
-			return nil, 0, fmt.Errorf("%s repeated a page at offset %d", operation, len(rows))
-		}
-		rows = append(rows, page...)
-		if hasLimit || hasOffset || len(rows) >= count {
-			return rows, count, nil
-		}
-		if len(page) == 0 {
-			return nil, 0, fmt.Errorf("%s returned an empty page after %d of %d rows", operation, len(rows), count)
-		}
-		previousPage = data
-		query["offset"] = strconv.Itoa(len(rows))
-		query["limit"] = strconv.Itoa(len(page))
+		body = envelope.Result
 	}
+	var row map[string]interface{}
+	if err := decodeQueryJSON(body, &row); err != nil {
+		return nil, 0, err
+	}
+	if row == nil {
+		return nil, 0, fmt.Errorf("%s returned an empty object", operation)
+	}
+	return []map[string]interface{}{row}, 1, nil
 }
 func decodeQueryJSON(raw []byte, target interface{}) error {
 	decoder := json.NewDecoder(bytes.NewReader(raw))

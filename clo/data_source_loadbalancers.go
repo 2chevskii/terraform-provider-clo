@@ -15,6 +15,8 @@ func dataSourceLoadBalancers() *schema.Resource {
 		Description: "Fetches the list of load balancers in the project",
 		ReadContext: dataSourceLoadBalancersRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns load balancers",
 				Type:        schema.TypeString,
@@ -100,8 +102,12 @@ func dataSourceLoadBalancers() *schema.Resource {
 
 func dataSourceLoadBalancersRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	lbs, err := cli.ListLoadBalancers(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	lbs, err := cli.ListLoadBalancers(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenLoadBalancersResults(lbs)); e != nil {

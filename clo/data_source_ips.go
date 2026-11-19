@@ -15,6 +15,8 @@ func dataSourceIPs() *schema.Resource {
 		Description: "Fetches the list of the IP-addresses",
 		ReadContext: dataSourceIPsRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project that owns addresses",
 				Type:        schema.TypeString,
@@ -71,8 +73,12 @@ func dataSourceIPs() *schema.Resource {
 
 func dataSourceIPsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	addresses, err := cli.ListAddresses(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	addresses, err := cli.ListAddresses(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("result", flattenIpsResults(addresses)); e != nil {

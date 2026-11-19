@@ -43,7 +43,7 @@ func dataSourceKeypair() *schema.Resource {
 
 func dataSourceKeypairRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	keypairs, err := cli.ListKeypairs(ctx, d.Get("project_id").(string))
+	keypairs, err := cli.ListKeypairs(ctx, d.Get("project_id").(string), nil)
 	if err != nil {
 		return diag.FromErr(err)
 	}

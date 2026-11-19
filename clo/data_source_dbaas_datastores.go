@@ -14,6 +14,8 @@ func dataSourceDbaasDatastores() *schema.Resource {
 		Description: "Fetches the list of dbaas datastores (database engines + versions) available in the project",
 		ReadContext: dataSourceDbaasDatastoresRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"project_id": {
 				Description: "ID of the project",
 				Type:        schema.TypeString,
@@ -37,8 +39,12 @@ func dataSourceDbaasDatastores() *schema.Resource {
 
 func dataSourceDbaasDatastoresRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	datastores, err := cli.ListDatastores(ctx, d.Get("project_id").(string))
+	options := listOptions(d)
+	datastores, err := cli.ListDatastores(ctx, d.Get("project_id").(string), options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	res := make([]interface{}, 0, len(datastores))

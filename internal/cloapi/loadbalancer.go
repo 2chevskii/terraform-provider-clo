@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -205,21 +206,26 @@ func (c *Client) GetLoadBalancer(ctx context.Context, id string) (*LoadBalancer,
 	return &lb, nil
 }
 
-// ListLoadBalancers returns the project's load balancers (single page, matching the other list adapters).
-func (c *Client) ListLoadBalancers(ctx context.Context, projectID string) ([]LoadBalancer, error) {
-	resp, err := c.gen.LoadBalancerListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]LoadBalancer, 0, len(items))
-	for i := range items {
-		out = append(out, loadBalancerFromSchema(&items[i]))
-	}
-	return out, nil
+// ListLoadBalancers returns the project's load balancers.
+func (c *Client) ListLoadBalancers(ctx context.Context, projectID string, options *ListOptions) ([]LoadBalancer, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]LoadBalancer, int, error) {
+		resp, err := c.gen.LoadBalancerListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListLoadBalancers response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]LoadBalancer, 0, len(items))
+		for i := range items {
+			out = append(out, loadBalancerFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // RenameLoadBalancer changes the load balancer's name.
@@ -315,21 +321,26 @@ func (c *Client) GetRule(ctx context.Context, id string) (*Rule, error) {
 	return &r, nil
 }
 
-// ListRules returns the load balancer's listener rules (single page, matching the other list adapters).
-func (c *Client) ListRules(ctx context.Context, loadBalancerID string) ([]Rule, error) {
-	resp, err := c.gen.RuleListWithResponse(ctx, loadBalancerID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Rule, 0, len(items))
-	for i := range items {
-		out = append(out, ruleFromSchema(&items[i]))
-	}
-	return out, nil
+// ListRules returns the load balancer's listener rules.
+func (c *Client) ListRules(ctx context.Context, loadBalancerID string, options *ListOptions) ([]Rule, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Rule, int, error) {
+		resp, err := c.gen.RuleListWithResponse(ctx, loadBalancerID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListRules response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Rule, 0, len(items))
+		for i := range items {
+			out = append(out, ruleFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // DeleteRule deletes a listener rule.

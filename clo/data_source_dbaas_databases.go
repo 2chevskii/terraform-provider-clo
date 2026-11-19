@@ -12,6 +12,8 @@ func dataSourceDbaasDatabases() *schema.Resource {
 		Description: "Lists DBaaS databases in a project or cluster.",
 		ReadContext: dataSourceDbaasDatabasesRead,
 		Schema: map[string]*schema.Schema{
+			"query":       listQuerySchema(),
+			"total_count": computedField(schema.TypeInt),
 			"cluster_id": {
 				Description: "ID of the dbaas cluster that owns the databases",
 				Type:        schema.TypeString,
@@ -47,8 +49,12 @@ func dataSourceDbaasDatabasesRead(ctx context.Context, d *schema.ResourceData, m
 		scope = project.(string)
 		list = cli.ListDatabasesByProject
 	}
-	databases, err := list(ctx, scope)
+	options := listOptions(d)
+	databases, err := list(ctx, scope, options)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("total_count", options.Total); err != nil {
 		return diag.FromErr(err)
 	}
 	res := make([]interface{}, 0, len(databases))

@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -206,21 +207,26 @@ func (c *Client) GetServer(ctx context.Context, id string) (*Server, error) {
 	return &s, nil
 }
 
-// ListServers returns the project's instances (single page, matching v2 behavior).
-func (c *Client) ListServers(ctx context.Context, projectID string) ([]Server, error) {
-	resp, err := c.gen.ProjectServerListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Server, 0, len(items))
-	for i := range items {
-		out = append(out, serverFromSchema(&items[i]))
-	}
-	return out, nil
+// ListServers returns the project's instances.
+func (c *Client) ListServers(ctx context.Context, projectID string, options *ListOptions) ([]Server, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Server, int, error) {
+		resp, err := c.gen.ProjectServerListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListServers response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Server, 0, len(items))
+		for i := range items {
+			out = append(out, serverFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // ResizeServer changes the instance's flavor.

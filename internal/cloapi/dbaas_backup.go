@@ -3,6 +3,7 @@ package cloapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gen "github.com/clo-ru/cloapi-go-client/v3"
@@ -84,21 +85,26 @@ func (c *Client) GetBackup(ctx context.Context, id string) (*Backup, error) {
 	return &b, nil
 }
 
-// ListBackups returns the project's dbaas backups (single page, matching the other list adapters).
-func (c *Client) ListBackups(ctx context.Context, projectID string) ([]Backup, error) {
-	resp, err := c.gen.ProjectBackupListWithResponse(ctx, projectID)
-	if err != nil {
-		return nil, err
-	}
-	if resp.OK == nil || resp.OK.Result == nil {
-		return nil, nil
-	}
-	items := *resp.OK.Result
-	out := make([]Backup, 0, len(items))
-	for i := range items {
-		out = append(out, backupFromSchema(&items[i]))
-	}
-	return out, nil
+// ListBackups returns the project's dbaas backups.
+func (c *Client) ListBackups(ctx context.Context, projectID string, options *ListOptions) ([]Backup, error) {
+	return CollectPages(ctx, options, func(query map[string]string) ([]Backup, int, error) {
+		resp, err := c.gen.ProjectBackupListWithResponse(ctx, projectID, gen.WithQuery(query))
+		if err != nil {
+			return nil, 0, err
+		}
+		if resp.OK == nil {
+			return nil, 0, fmt.Errorf("missing ListBackups response")
+		}
+		if resp.OK.Result == nil {
+			return nil, resp.OK.Count, nil
+		}
+		items := *resp.OK.Result
+		out := make([]Backup, 0, len(items))
+		for i := range items {
+			out = append(out, backupFromSchema(&items[i]))
+		}
+		return out, resp.OK.Count, nil
+	})
 }
 
 // DownloadBackup returns a fresh presigned download URL for the backup.

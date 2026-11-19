@@ -48,7 +48,7 @@ func dataSourceImage() *schema.Resource {
 
 func dataSourceImageRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	images, err := cli.ListImages(ctx, d.Get("project_id").(string))
+	images, err := cli.ListImages(ctx, d.Get("project_id").(string), nil)
 	if err != nil {
 		return diag.FromErr(err)
 	}
