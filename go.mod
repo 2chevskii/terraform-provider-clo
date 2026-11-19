@@ -3,7 +3,7 @@ module github.com/clo-ru/terraform-provider-clo/v2
 go 1.25
 
 require (
-	github.com/clo-ru/cloapi-go-client/v3 v3.2.0
+	github.com/clo-ru/cloapi-go-client/v3 v3.2.96
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.21.0
