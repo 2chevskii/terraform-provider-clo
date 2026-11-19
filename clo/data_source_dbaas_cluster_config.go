@@ -19,6 +19,7 @@ func dataSourceDbaasClusterConfig() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"config_json": {Type: schema.TypeString, Computed: true, Description: "Complete current, default and last_stable configuration maps as JSON, preserving API value types and null."},
 			"current": {
 				Description: "The cluster's live configuration (parameter name -> value)",
 				Type:        schema.TypeMap,
@@ -46,6 +47,13 @@ func dataSourceDbaasClusterConfigRead(ctx context.Context, d *schema.ResourceDat
 	id := d.Get("cluster_id").(string)
 	cfg, err := cli.GetClusterConfig(ctx, id)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	encoded, err := json.Marshal(map[string]interface{}{"current": cfg.Current, "default": cfg.Default, "last_stable": cfg.LastStable})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("config_json", string(encoded)); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("current", stringifyConfigMap(cfg.Current)); e != nil {

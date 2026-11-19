@@ -157,6 +157,15 @@ func resourceLoadBalancer() *schema.Resource {
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
+			"initial_rule": {
+				Type: schema.TypeSet, Optional: true, ForceNew: true,
+				Description: "Listener rules sent during balancer creation. Changes replace the balancer. Use standalone rule resources for independently managed rules.",
+				Elem: &schema.Resource{Schema: map[string]*schema.Schema{
+					"address_id":             {Type: schema.TypeString, Required: true},
+					"external_protocol_port": {Type: schema.TypeInt, Required: true},
+					"internal_protocol_port": {Type: schema.TypeInt, Required: true},
+				}},
+			},
 			"rules_count": {
 				Description: "Number of listener rules on the load balancer",
 				Type:        schema.TypeInt,
@@ -301,6 +310,10 @@ func buildLoadBalancerCreateParams(d *schema.ResourceData) cloapi.LoadBalancerCr
 		Algorithm:          d.Get("algorithm").(string),
 		SessionPersistence: &sp,
 		Healthmonitor:      expandHealthmonitor(d.Get("healthmonitor").([]interface{})),
+	}
+	for _, item := range d.Get("initial_rule").(*schema.Set).List() {
+		r := item.(map[string]interface{})
+		p.Rules = append(p.Rules, cloapi.RuleCreateParams{AddressID: r["address_id"].(string), ExternalProtocolPort: r["external_protocol_port"].(int), InternalProtocolPort: r["internal_protocol_port"].(int)})
 	}
 	if v, ok := d.GetOk("address"); ok {
 		list := v.([]interface{})

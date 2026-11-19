@@ -114,7 +114,16 @@ func resourceDbaasCluster() *schema.Resource {
 					},
 				},
 			},
-			"restore_from_backup_id": {
+			"initial_database": {
+				Type: schema.TypeList, MaxItems: 1, Optional: true, ForceNew: true, ConflictsWith: []string{"restore_from_backup_id"},
+				Description: "Provision a database in the same request that creates the cluster. Changes replace the cluster.",
+				Elem: &schema.Resource{Schema: map[string]*schema.Schema{
+					"name":           {Type: schema.TypeString, Required: true},
+					"admin_username": {Type: schema.TypeString, Required: true},
+					"admin_password": {Type: schema.TypeString, Required: true, Sensitive: true},
+				}},
+			},
+			"restore_from_backup_id": {ConflictsWith: []string{"initial_database"},
 				Description: "ID of a backup to restore into the new cluster. Mutually exclusive with an initial database.",
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -358,6 +367,10 @@ func buildClusterCreateParams(d *schema.ResourceData) cloapi.ClusterCreateParams
 		StorageSize:       d.Get("storage_size").(int),
 		DatastoreID:       d.Get("datastore_id").(string),
 		RestoreFromBackup: d.Get("restore_from_backup_id").(string),
+	}
+	if blocks := d.Get("initial_database").([]interface{}); len(blocks) > 0 && blocks[0] != nil {
+		db := blocks[0].(map[string]interface{})
+		p.Database = &cloapi.InitialDatabase{Name: db["name"].(string), AdminUsername: db["admin_username"].(string), AdminPassword: db["admin_password"].(string)}
 	}
 	if fl := d.Get("flavor").([]interface{}); len(fl) > 0 && fl[0] != nil {
 		mfl := fl[0].(map[string]interface{})

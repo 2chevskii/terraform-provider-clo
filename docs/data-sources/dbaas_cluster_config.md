@@ -32,6 +32,7 @@ output "max_connections" {
 
 ### Read-Only
 
+- `config_json` (String) Complete current, default and last_stable configuration maps as JSON, preserving API value types and null.
 - `current` (Map of String) The cluster's live configuration (parameter name -> value)
 - `default` (Map of String) The default configuration for the cluster's datastore and flavor
 - `id` (String) The ID of this resource.

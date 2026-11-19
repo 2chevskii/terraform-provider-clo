@@ -70,6 +70,7 @@ resource "clo_network_loadbalancer" "lb_2" {
 - `address` (Block List) Address to attach to the load balancer. If omitted, one is allocated automatically (see [below for nested schema](#nestedblock--address))
 - `algorithm` (String) Balancing algorithm. One of `ROUND_ROBIN`, `LEAST_CONNECTIONS`
 - `enabled` (Boolean) Whether the load balancer is powered on. Defaults to true.
+- `initial_rule` (Block Set) Listener rules sent during balancer creation. Changes replace the balancer. Use standalone rule resources for independently managed rules. (see [below for nested schema](#nestedblock--initial_rule))
 - `session_persistence` (Boolean) Whether to keep a client on the same backend across requests
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -107,6 +108,16 @@ Optional:
 
 - `ddos_protection` (Boolean) Whether the allocated address should be DDoS-protected
 - `id` (String) Use an existing address with this ID
+
+
+<a id="nestedblock--initial_rule"></a>
+### Nested Schema for `initial_rule`
+
+Required:
+
+- `address_id` (String)
+- `external_protocol_port` (Number)
+- `internal_protocol_port` (Number)
 
 
 <a id="nestedblock--timeouts"></a>

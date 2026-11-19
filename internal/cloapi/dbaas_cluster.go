@@ -117,10 +117,13 @@ func nodeFromSchema(r *gen.DbaasNodeSchema) Node {
 	}
 }
 
-// ClusterCreateParams holds the inputs for creating a dbaas cluster. Databases
-// are managed separately (clo_dbaas_database); the create-time content slot is
-// RestoreFromBackup, which is mutually exclusive with an initial database.
+type InitialDatabase = struct {
+	AdminPassword string `json:"admin_password"`
+	AdminUsername string `json:"admin_username"`
+	Name          string `json:"name"`
+}
 type ClusterCreateParams struct {
+	Database          *InitialDatabase
 	Name              string
 	FlavorRam         int
 	FlavorVcpus       int
@@ -138,6 +141,7 @@ func clusterCreateBody(p ClusterCreateParams) gen.DbaasClusterCreateJSONRequestB
 		Name:        p.Name,
 		StorageSize: p.StorageSize,
 	}
+	body.Database = p.Database
 	body.Flavor.Ram = p.FlavorRam
 	body.Flavor.Vcpus = p.FlavorVcpus
 	if p.DatastoreID != "" {

@@ -112,6 +112,7 @@ type HealthmonitorParams struct {
 
 // LoadBalancerCreateParams holds the inputs for creating a load balancer.
 type LoadBalancerCreateParams struct {
+	Rules              []RuleCreateParams
 	Name               string
 	Algorithm          string // optional; empty → API default
 	SessionPersistence *bool  // optional
@@ -164,14 +165,18 @@ func loadBalancerCreateBody(p LoadBalancerCreateParams) gen.LoadBalancerCreateJS
 		}
 	}
 
-	// The API derives a rule quota from this field and errors on a missing
-	// (null) rules key; rules are managed as standalone resources, so always
-	// send an explicit empty list.
-	body.Rules = &[]struct {
+	// CLO requires an explicit array, including when no initial rules are requested.
+	rules := make([]struct {
 		AddressId            string `json:"address_id"`
 		ExternalProtocolPort int    `json:"external_protocol_port"`
 		InternalProtocolPort int    `json:"internal_protocol_port"`
-	}{}
+	}, len(p.Rules))
+	for i, r := range p.Rules {
+		rules[i].AddressId = r.AddressID
+		rules[i].ExternalProtocolPort = r.ExternalProtocolPort
+		rules[i].InternalProtocolPort = r.InternalProtocolPort
+	}
+	body.Rules = &rules
 	return body
 }
 

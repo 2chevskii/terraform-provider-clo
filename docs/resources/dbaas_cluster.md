@@ -67,6 +67,7 @@ resource "clo_dbaas_cluster" "cluster_2" {
 - `backup_enabled` (Boolean) Whether scheduled backups are enabled for the cluster. Defaults to true.
 - `datastore_id` (String) ID of the datastore (database engine + version) for the cluster. Resolve it with the `clo_dbaas_datastores` data source.
 - `enabled` (Boolean) Whether the cluster is powered on. Defaults to true.
+- `initial_database` (Block List, Max: 1) Provision a database in the same request that creates the cluster. Changes replace the cluster. (see [below for nested schema](#nestedblock--initial_database))
 - `restore_from_backup_id` (String) ID of a backup to restore into the new cluster. Mutually exclusive with an initial database.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -106,6 +107,16 @@ Optional:
 
 - `ddos_protection` (Boolean) Whether the allocated address should be DDoS-protected
 - `id` (String) Use an existing address with this ID
+
+
+<a id="nestedblock--initial_database"></a>
+### Nested Schema for `initial_database`
+
+Required:
+
+- `admin_password` (String, Sensitive)
+- `admin_username` (String)
+- `name` (String)
 
 
 <a id="nestedblock--timeouts"></a>
