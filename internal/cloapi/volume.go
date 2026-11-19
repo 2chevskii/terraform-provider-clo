@@ -109,23 +109,26 @@ func (c *Client) AttachVolume(ctx context.Context, volumeID, serverID string) er
 }
 
 // DetachVolume detaches the volume.
-func (c *Client) DetachVolume(ctx context.Context, volumeID string, force bool) error {
-	body := gen.VolumeDetachJSONRequestBody{}
-	if force {
-		body.Force = &force
-	}
+func (c *Client) DetachVolume(ctx context.Context, volumeID string, force, clearFstab bool) error {
+	body := gen.VolumeDetachJSONRequestBody{Force: &force, ClearFstab: &clearFstab}
 	_, err := c.gen.VolumeDetachWithResponse(ctx, volumeID, body)
 	return err
 }
 
 // ExtendVolume increases the volume size to newSize (Gb).
-func (c *Client) ExtendVolume(ctx context.Context, id string, newSize int) error {
-	_, err := c.gen.VolumeExtendWithResponse(ctx, id, gen.VolumeExtendJSONRequestBody{NewSize: newSize})
+func (c *Client) ExtendVolume(ctx context.Context, id string, newSize int, reboot bool) error {
+	_, err := c.gen.VolumeExtendWithResponse(ctx, id, gen.VolumeExtendJSONRequestBody{NewSize: newSize, RebootServer: &reboot})
 	return err
 }
 
-// DeleteVolume deletes the volume. The v3 API requires a (here empty) body.
-func (c *Client) DeleteVolume(ctx context.Context, id string) error {
-	_, err := c.gen.VolumeDeleteWithResponse(ctx, id, gen.VolumeDeleteJSONRequestBody{})
+// UpdateVolume updates only the supplied metadata fields.
+func (c *Client) UpdateVolume(ctx context.Context, id string, name, description *string) error {
+	_, err := c.gen.VolumeUpdateWithResponse(ctx, id, gen.VolumeUpdateJSONRequestBody{Name: name, Description: description})
+	return err
+}
+
+// DeleteVolume deletes a volume with the selected cleanup options.
+func (c *Client) DeleteVolume(ctx context.Context, id string, force, clearFstab bool) error {
+	_, err := c.gen.VolumeDeleteWithResponse(ctx, id, gen.VolumeDeleteJSONRequestBody{Force: &force, ClearFstab: &clearFstab})
 	return err
 }

@@ -121,7 +121,7 @@ func buildTestVolume(cli *cloapi.Client, t *testing.T) (string, error) {
 }
 
 func destroyTestVolume(volumeId string, cli *cloapi.Client) error {
-	if err := cli.DeleteVolume(context.Background(), volumeId); err != nil {
+	if err := cli.DeleteVolume(context.Background(), volumeId, false, false); err != nil {
 		return err
 	}
 	return waitVolumeDeleted(context.Background(), volumeId, cli, 10*time.Minute)

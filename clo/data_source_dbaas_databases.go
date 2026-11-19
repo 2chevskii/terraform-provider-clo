@@ -2,8 +2,6 @@ package clo
 
 import (
 	"context"
-	"strconv"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -11,14 +9,15 @@ import (
 
 func dataSourceDbaasDatabases() *schema.Resource {
 	return &schema.Resource{
-		Description: "Fetches the list of databases in a dbaas cluster",
+		Description: "Lists DBaaS databases in a project or cluster.",
 		ReadContext: dataSourceDbaasDatabasesRead,
 		Schema: map[string]*schema.Schema{
 			"cluster_id": {
 				Description: "ID of the dbaas cluster that owns the databases",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true, ExactlyOneOf: []string{"cluster_id", "project_id"},
 			},
+			"project_id": {Type: schema.TypeString, Optional: true, ExactlyOneOf: []string{"cluster_id", "project_id"}, Description: "ID of the project containing the databases."},
 			"result": {
 				Description: "The object that holds the results",
 				Type:        schema.TypeList,
@@ -42,7 +41,13 @@ func dataSourceDbaasDatabases() *schema.Resource {
 
 func dataSourceDbaasDatabasesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	databases, err := cli.ListDatabasesByCluster(ctx, d.Get("cluster_id").(string))
+	scope := d.Get("cluster_id").(string)
+	list := cli.ListDatabasesByCluster
+	if project, ok := d.GetOk("project_id"); ok {
+		scope = project.(string)
+		list = cli.ListDatabasesByProject
+	}
+	databases, err := list(ctx, scope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -62,6 +67,6 @@ func dataSourceDbaasDatabasesRead(ctx context.Context, d *schema.ResourceData, m
 	if e := d.Set("result", res); e != nil {
 		return diag.FromErr(e)
 	}
-	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
+	d.SetId(scope)
 	return nil
 }

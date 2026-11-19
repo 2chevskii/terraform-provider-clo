@@ -29,6 +29,8 @@ resource "clo_disks_volume_attach" "v_att" {
 
 ### Optional
 
+- `clear_fstab` (Boolean) Clear the filesystem table entry on detach.
+- `force_detach` (Boolean) Force volume detach.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

@@ -30,7 +30,12 @@ resource "clo_disks_volume" "volume_1" {
 
 ### Optional
 
+- `autorename` (Boolean) Request automatic naming at create. Omitting name also enables automatic naming.
+- `clear_fstab` (Boolean) Clear the filesystem table entry on deletion.
+- `description` (String) Volume description.
+- `force_delete` (Boolean) Force volume deletion.
 - `name` (String) Human-readable name of the new volume
+- `reboot_server` (Boolean) Request a server reboot when extending an attached volume.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

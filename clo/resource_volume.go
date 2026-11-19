@@ -48,13 +48,18 @@ func resourceVolume() *schema.Resource {
 				Description: "ID of the project where the volume should be created",
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 			},
 			"name": {
 				Description: "Human-readable name of the new volume",
 				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
+				Optional:    true, Computed: true,
 			},
+			"description":   {Type: schema.TypeString, Optional: true, Description: "Volume description."},
+			"autorename":    {Type: schema.TypeBool, Optional: true, ForceNew: true, Description: "Request automatic naming at create. Omitting name also enables automatic naming."},
+			"force_delete":  {Type: schema.TypeBool, Optional: true, Description: "Force volume deletion."},
+			"clear_fstab":   {Type: schema.TypeBool, Optional: true, Description: "Clear the filesystem table entry on deletion."},
+			"reboot_server": {Type: schema.TypeBool, Optional: true, Description: "Request a server reboot when extending an attached volume."},
 			"size": {
 				Description: "Size of the new volume in Gb",
 				Type:        schema.TypeInt,
@@ -83,27 +88,47 @@ func resourceVolumeCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	d.SetId(id)
 	if err := waitVolumeState(ctx, id, cli, []string{creatingVolume}, []string{activeVolume}, d.Timeout(schema.TimeoutCreate)); err != nil {
 		return diag.FromErr(err)
 	}
-	d.SetId(id)
+	if desc, ok := d.GetOk("description"); ok {
+		value := desc.(string)
+		if err := cli.UpdateVolume(ctx, id, nil, &value); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	return resourceVolumeRead(ctx, d, m)
 }
 
 func resourceVolumeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
+	var name, description *string
+	if d.HasChange("name") {
+		v := d.Get("name").(string)
+		name = &v
+	}
+	if d.HasChange("description") {
+		v := d.Get("description").(string)
+		description = &v
+	}
+	if name != nil || description != nil {
+		if err := cli.UpdateVolume(ctx, d.Id(), name, description); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	if d.HasChange("size") {
 		_, c := d.GetChange("size")
 		if err := resizeVolume(ctx, cli, d, c.(int)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	return nil
+	return resourceVolumeRead(ctx, d, m)
 }
 
 func resourceVolumeDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
-	if err := cli.DeleteVolume(ctx, d.Id()); err != nil {
+	if err := cli.DeleteVolume(ctx, d.Id(), d.Get("force_delete").(bool), d.Get("clear_fstab").(bool)); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := waitVolumeDeleted(ctx, d.Id(), cli, d.Timeout(schema.TimeoutDelete)); err != nil {
@@ -115,8 +140,17 @@ func resourceVolumeDelete(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceVolumeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
 	vol, err := cli.GetVolume(ctx, d.Id())
+	if cloapi.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	for k, v := range map[string]interface{}{"name": vol.Name, "description": vol.Description, "size": vol.Size} {
+		if err := d.Set(k, v); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if e := d.Set("id", vol.ID); e != nil {
 		return diag.FromErr(e)
@@ -158,7 +192,7 @@ func waitVolumeDeleted(ctx context.Context, id string, cli *cloapi.Client, timeo
 func createVolume(ctx context.Context, cli *cloapi.Client, d *schema.ResourceData) (string, error) {
 	p := cloapi.VolumeCreateParams{
 		ProjectID: d.Get("project_id").(string),
-		Size:      d.Get("size").(int),
+		Size:      d.Get("size").(int), Autorename: d.Get("autorename").(bool),
 	}
 	if n, ok := d.GetOk("name"); ok {
 		p.Name = n.(string)
@@ -169,8 +203,8 @@ func createVolume(ctx context.Context, cli *cloapi.Client, d *schema.ResourceDat
 }
 
 func resizeVolume(ctx context.Context, cli *cloapi.Client, d *schema.ResourceData, size int) error {
-	if err := cli.ExtendVolume(ctx, d.Id(), size); err != nil {
+	if err := cli.ExtendVolume(ctx, d.Id(), size, d.Get("reboot_server").(bool)); err != nil {
 		return err
 	}
-	return waitVolumeState(ctx, d.Id(), cli, []string{resizingVolume}, []string{activeVolume, attachedVolume}, d.Timeout(schema.TimeoutCreate))
+	return waitVolumeState(ctx, d.Id(), cli, []string{resizingVolume}, []string{activeVolume, attachedVolume}, d.Timeout(schema.TimeoutUpdate))
 }
