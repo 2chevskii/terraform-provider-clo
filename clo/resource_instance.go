@@ -2,7 +2,7 @@ package clo
 
 import (
 	"context"
-	"strings"
+
 	"time"
 
 	"github.com/clo-ru/terraform-provider-clo/v2/internal/cloapi"
@@ -37,8 +37,10 @@ func resourceInstance() *schema.Resource {
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 		Schema: map[string]*schema.Schema{
+			"deletion": serverDeletionSchema(),
 			"project_id": {
 				Description: "ID of the project where the instance should be created",
+				ForceNew:    true,
 				Type:        schema.TypeString,
 				Required:    true,
 			},
@@ -54,11 +56,12 @@ func resourceInstance() *schema.Resource {
 				Sensitive:   true,
 			},
 			"image_id": {
-				Description: "ID of the image that will be using",
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
+				Description: "Operating system image ID.", Type: schema.TypeString, Optional: true,
+				ForceNew: true,
 			},
+			"volume_id": {Type: schema.TypeString, Optional: true, ForceNew: true, Description: "Existing boot volume ID."},
+			"user_data": {Type: schema.TypeString, Optional: true, ForceNew: true, Sensitive: true, Description: "Base64-encoded cloud-init script."},
+			"cpu_type":  {Type: schema.TypeString, Optional: true, Computed: true, ForceNew: true, Description: "CPU type of the instance."},
 			"flavor_ram": {
 				Description: "Amount of RAM of the new instance",
 				Type:        schema.TypeInt,
@@ -72,7 +75,7 @@ func resourceInstance() *schema.Resource {
 			"block_device": {
 				Description: "Disk data for the new instance",
 				Type:        schema.TypeList,
-				Required:    true,
+				Optional:    true,
 				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -127,7 +130,7 @@ func resourceInstance() *schema.Resource {
 						"bandwidth": {
 							Description: "Max address bandwidth, must be 100 or 1024",
 							Type:        schema.TypeInt,
-							Optional:    true,
+							Optional:    true, ForceNew: true,
 						},
 					},
 				},
@@ -135,8 +138,8 @@ func resourceInstance() *schema.Resource {
 			"keypairs": {
 				Description: "The list contains the SSH-keypairs IDs",
 				Type:        schema.TypeList,
-				Optional:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true, ForceNew: true,
+				Elem: &schema.Schema{Type: schema.TypeString},
 			},
 			"recipe_id": {
 				Description: "ID of the recipe that will be installed on the instance",
@@ -159,8 +162,9 @@ func resourceInstance() *schema.Resource {
 						Optional: true,
 					},
 					"value": {
-						Type:     schema.TypeInt,
-						Optional: true,
+						Deprecated: "The CLO API ignores this field. Remove it from configuration.",
+						Type:       schema.TypeInt,
+						Optional:   true,
 					},
 				}},
 			},
@@ -248,6 +252,7 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, m interfa
 		"status":        srv.Status,
 		"switch_status": srv.SwitchStatus,
 		"created_in":    srv.CreatedIn,
+		"flavor_ram":    srv.FlavorRam, "flavor_vcpus": srv.FlavorVcpus, "cpu_type": srv.CPUType,
 	}
 	for k, val := range fields {
 		if e := d.Set(k, val); e != nil {
@@ -257,39 +262,14 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, m interfa
 	return nil
 }
 
-func resourceInstanceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	servID := d.Id()
-	cli := m.(*providerMeta).v3
-
-	srv, err := cli.GetServer(ctx, servID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	var deleteVolumes []string
-	for _, disk := range srv.Disks {
-		if strings.ToLower(disk.StorageType) == "volume" {
-			deleteVolumes = append(deleteVolumes, disk.ID)
-		}
-	}
-
-	if err := cli.DeleteServer(ctx, servID, srv.Addresses, deleteVolumes); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := waitInstanceDeleted(ctx, servID, cli, d.Timeout(schema.TimeoutDelete)); err != nil {
-		return diag.FromErr(err)
-	}
-	return nil
-}
-
 // Helpers
 
 func buildServerCreateParams(d *schema.ResourceData) cloapi.ServerCreateParams {
 	return cloapi.ServerCreateParams{
-		ProjectID:   d.Get("project_id").(string),
-		Name:        d.Get("name").(string),
-		ImageID:     d.Get("image_id").(string),
+		ProjectID: d.Get("project_id").(string),
+		Name:      d.Get("name").(string),
+		ImageID:   optString(d, "image_id"),
+		VolumeID:  optString(d, "volume_id"), UserData: optString(d, "user_data"), CPUType: optString(d, "cpu_type"),
 		FlavorRam:   d.Get("flavor_ram").(int),
 		FlavorVcpus: d.Get("flavor_vcpus").(int),
 		RecipeID:    optString(d, "recipe_id"),

@@ -31,8 +31,10 @@ data "clo_storage_s3_user" "s3user" {
 - `id` (String) The ID of this resource.
 - `max_buckets` (Number) How many buckets the user could create
 - `name` (String) Human-readable name of the user
+- `project` (String)
 - `quotas` (List of Object) The object represents a user's quota (see [below for nested schema](#nestedatt--quotas))
 - `status` (String)
+- `switch_status` (String)
 - `tenant` (String) Name of the user's tenant. Name of the user's project uses by default
 
 <a id="nestedatt--quotas"></a>

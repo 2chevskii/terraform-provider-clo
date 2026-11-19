@@ -3,12 +3,12 @@
 page_title: "clo_compute_snapshot_restore Resource - terraform-provider-clo"
 subcategory: ""
 description: |-
-  Provision a new server from a snapshot. The resource owns the server it creates: destroying it deletes that server along with its volumes and addresses. To then manage the server with the full instance API, import it into a clo_compute_instance resource instead.
+  Provision a server from a snapshot. Destroy deletes the server and applies the configured attachment deletion policy.
 ---
 
 # clo_compute_snapshot_restore (Resource)
 
-Provision a new server from a snapshot. The resource owns the server it creates: destroying it deletes that server along with its volumes and addresses. To then manage the server with the full instance API, import it into a `clo_compute_instance` resource instead.
+Provision a server from a snapshot. Destroy deletes the server and applies the configured attachment deletion policy.
 
 ## Example Usage
 
@@ -31,6 +31,7 @@ resource "clo_compute_snapshot_restore" "restored" {
 
 ### Optional
 
+- `deletion` (Block List, Max: 1) Controls attachment cleanup on destroy. Omitting this block deletes all currently attached addresses and network volumes. An empty block retains them all. (see [below for nested schema](#nestedblock--deletion))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -40,6 +41,16 @@ resource "clo_compute_snapshot_restore" "restored" {
 - `id` (String) ID of the provisioned server
 - `project` (String) ID of the project the server belongs to
 - `status` (String) Lifecycle status of the provisioned server
+
+<a id="nestedblock--deletion"></a>
+### Nested Schema for `deletion`
+
+Optional:
+
+- `address_ids` (Set of String) Attached address IDs to delete.
+- `clear_fstab` (Boolean) Clear filesystem table entries during deletion.
+- `volume_ids` (Set of String) Attached network volume IDs to delete.
+
 
 <a id="nestedblock--timeouts"></a>
 ### Nested Schema for `timeouts`

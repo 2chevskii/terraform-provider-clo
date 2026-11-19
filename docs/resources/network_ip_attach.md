@@ -31,6 +31,7 @@ resource "clo_network_ip_attach" "fip_attach" {
 
 ### Optional
 
+- `bandwidth` (Number) Maximum address bandwidth in Mbps (100 or 1024).
 - `is_primary` (Boolean) Use the address as a primary address
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 

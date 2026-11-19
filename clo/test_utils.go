@@ -88,7 +88,7 @@ func buildTestServer(cli *cloapi.Client, t *testing.T) (string, error) {
 }
 
 func destroyTestServer(serverId string, cli *cloapi.Client) error {
-	if err := cli.DeleteServer(context.Background(), serverId, nil, nil); err != nil {
+	if err := cli.DeleteServer(context.Background(), serverId, nil, nil, false); err != nil {
 		return err
 	}
 	return waitInstanceDeleted(context.Background(), serverId, cli, 20*time.Minute)
@@ -164,12 +164,13 @@ func destroyTestAddress(id string, cli *cloapi.Client) error {
 
 func buildTestS3user(cli *cloapi.Client, t *testing.T) (string, error) {
 	testName := strings.ReplaceAll(uuid.NewString(), "-", "")
+	quotaObjects := 10
 	id, err := cli.CreateS3User(context.Background(), cloapi.S3UserCreateParams{
 		ProjectID:           getTestProject(),
 		Name:                testName,
 		CanonicalName:       testName,
 		UserQuotaMaxSize:    10,
-		UserQuotaMaxObjects: 10,
+		UserQuotaMaxObjects: &quotaObjects,
 	})
 	if err != nil {
 		return "", err

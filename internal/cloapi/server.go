@@ -19,6 +19,7 @@ type Server struct {
 	CreatedIn    string
 	RescueMode   string
 	GuestAgent   bool
+	CPUType      string
 	FlavorRam    int
 	FlavorVcpus  int
 	ImageName    string // "<distribution> <version>", empty if no image
@@ -45,6 +46,7 @@ func serverFromSchema(r *gen.ServerSchema) Server {
 		CreatedIn:    r.CreatedIn.Format(time.RFC3339),
 	}
 	if r.Flavor != nil {
+		s.CPUType = r.Flavor.CpuType
 		s.FlavorRam = r.Flavor.Ram
 		s.FlavorVcpus = r.Flavor.Vcpus
 	}
@@ -92,6 +94,9 @@ type ServerCreateParams struct {
 	ProjectID   string
 	Name        string
 	ImageID     string
+	VolumeID    string
+	UserData    string
+	CPUType     string
 	FlavorRam   int
 	FlavorVcpus int
 	RecipeID    string
@@ -105,6 +110,15 @@ type ServerCreateParams struct {
 // construction the generated body requires is contained here.
 func (c *Client) CreateServer(ctx context.Context, p ServerCreateParams) (string, error) {
 	body := gen.ServerCreateJSONRequestBody{Name: p.Name}
+	if p.VolumeID != "" {
+		body.Volume = &p.VolumeID
+	}
+	if p.UserData != "" {
+		body.UserData = &p.UserData
+	}
+	if p.CPUType != "" {
+		body.Flavor.CpuType = &p.CPUType
+	}
 	body.Flavor.Ram = p.FlavorRam
 	body.Flavor.Vcpus = p.FlavorVcpus
 	if p.ImageID != "" {
@@ -240,15 +254,15 @@ func (c *Client) StopServer(ctx context.Context, id string) error {
 }
 
 // DeleteServer deletes the instance, optionally deleting the given addresses and volumes.
-func (c *Client) DeleteServer(ctx context.Context, id string, deleteAddresses, deleteVolumes []string) error {
-	body := gen.ServerDeleteJSONRequestBody{}
-	if len(deleteAddresses) > 0 {
+func (c *Client) DeleteServer(ctx context.Context, id string, deleteAddresses, deleteVolumes []string, clearFstab bool) error {
+	body := gen.ServerDeleteJSONRequestBody{ClearFstab: &clearFstab}
+	if deleteAddresses != nil {
 		body.DeleteAddresses = &gen.ServerDeleteJSONBody_DeleteAddresses{}
 		if err := body.DeleteAddresses.FromServerDeleteJSONBodyDeleteAddresses0(deleteAddresses); err != nil {
 			return err
 		}
 	}
-	if len(deleteVolumes) > 0 {
+	if deleteVolumes != nil {
 		body.DeleteVolumes = &gen.ServerDeleteJSONBody_DeleteVolumes{}
 		if err := body.DeleteVolumes.FromServerDeleteJSONBodyDeleteVolumes0(deleteVolumes); err != nil {
 			return err

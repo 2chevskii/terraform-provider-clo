@@ -25,7 +25,9 @@ func dataSourceS3User() *schema.Resource {
 				Description: "Name of the user's tenant. " +
 					"Name of the user's project uses by default",
 				Type: schema.TypeString, Computed: true},
-			"status": {Type: schema.TypeString, Computed: true},
+			"project":       {Type: schema.TypeString, Computed: true},
+			"switch_status": {Type: schema.TypeString, Computed: true},
+			"status":        {Type: schema.TypeString, Computed: true},
 			"canonical_name": {
 				Description: "Canonical name of the user. The storage uses this name. " +
 					"Should be unique in scope of the tenant",
@@ -61,6 +63,8 @@ func dataSourceS3UserRead(ctx context.Context, d *schema.ResourceData, m interfa
 	fields := map[string]interface{}{
 		"name":           user.Name,
 		"status":         user.Status,
+		"project":        user.Project,
+		"switch_status":  user.SwitchStatus,
 		"tenant":         user.Tenant,
 		"max_buckets":    user.MaxBuckets,
 		"canonical_name": user.CanonicalName,

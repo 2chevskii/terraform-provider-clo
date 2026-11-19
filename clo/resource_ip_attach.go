@@ -41,6 +41,7 @@ func resourceIpAttach() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 			},
+			"bandwidth": addressBandwidthSchema(),
 			"is_primary": {
 				Description: "Use the address as a primary address",
 				Type:        schema.TypeBool,
@@ -57,10 +58,11 @@ func resourceIpAttachCreate(ctx context.Context, d *schema.ResourceData, m inter
 	adId := d.Get("address_id").(string)
 	cli := m.(*providerMeta).v3
 
-	if err := cli.AttachAddress(ctx, adId, d.Get("entity_id").(string), d.Get("entity_name").(string)); err != nil {
+	if err := cli.AttachAddress(ctx, adId, d.Get("entity_id").(string), d.Get("entity_name").(string), d.Get("bandwidth").(int)); err != nil {
 		return diag.FromErr(err)
 	}
 
+	d.SetId(adId)
 	if err := waitAddressState(ctx, adId, cli, []string{processingIp}, []string{attachedIp}, d.Timeout(schema.TimeoutCreate)); err != nil {
 		return diag.FromErr(err)
 	}
@@ -71,25 +73,24 @@ func resourceIpAttachCreate(ctx context.Context, d *schema.ResourceData, m inter
 		}
 	}
 
-	addr, err := cli.GetAddress(ctx, adId)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if e := d.Set("status", addr.Status); e != nil {
-		return diag.FromErr(e)
-	}
-	if e := d.Set("is_primary", addr.IsPrimary); e != nil {
-		return diag.FromErr(e)
-	}
-	d.SetId(adId)
-
 	return resourceIpAttachRead(ctx, d, m)
 }
 
 func resourceIpAttachRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
 	addr, err := cli.GetAddress(ctx, d.Id())
+	if cloapi.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if addr.AttachedTo == nil || addr.AttachedTo.ID != d.Get("entity_id").(string) || addr.AttachedTo.Entity != d.Get("entity_name").(string) {
+		d.SetId("")
+		return nil
+	}
+	if err := d.Set("bandwidth", addr.Bandwidth); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("status", addr.Status); e != nil {
@@ -116,12 +117,20 @@ func resourceIpDetach(ctx context.Context, d *schema.ResourceData, m interface{}
 }
 
 func resourceIpAttachUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	if d.HasChange("is_primary") && !d.Get("is_primary").(bool) {
+		return diag.Errorf("CLO demotes a primary address when another address becomes primary. Set is_primary on the replacement address first.")
+	}
+	if d.HasChange("bandwidth") {
+		if err := updateAddressBandwidth(ctx, d, m.(*providerMeta).v3, d.Get("bandwidth").(int)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	if d.HasChange("is_primary") {
 		if err := makePrimary(ctx, d.Id(), m.(*providerMeta).v3, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	return nil
+	return resourceIpAttachRead(ctx, d, m)
 }
 
 func makePrimary(ctx context.Context, adId string, cli *cloapi.Client, d *schema.ResourceData) error {

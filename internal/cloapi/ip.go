@@ -105,11 +105,16 @@ func (c *Client) DeleteAddress(ctx context.Context, id string) error {
 }
 
 // AttachAddress attaches the address to an entity (e.g. "server" or "loadbalancer").
-func (c *Client) AttachAddress(ctx context.Context, id, entityID, entityName string) error {
-	_, err := c.gen.AddressAttachWithResponse(ctx, id, gen.AddressAttachJSONRequestBody{
+func (c *Client) AttachAddress(ctx context.Context, id, entityID, entityName string, bandwidth int) error {
+	body := gen.AddressAttachJSONRequestBody{
 		Id:     entityID,
 		Entity: entityName,
-	})
+	}
+	if bandwidth != 0 {
+		value := gen.AddressAttachJSONBodyBandwidthMaxMbps(bandwidth)
+		body.BandwidthMaxMbps = &value
+	}
+	_, err := c.gen.AddressAttachWithResponse(ctx, id, body)
 	return err
 }
 
@@ -128,5 +133,11 @@ func (c *Client) SetAddressPrimary(ctx context.Context, id string) error {
 // ChangeAddressPtr sets the address PTR record.
 func (c *Client) ChangeAddressPtr(ctx context.Context, id, value string) error {
 	_, err := c.gen.AddressEditPtrWithResponse(ctx, id, gen.AddressEditPtrJSONRequestBody{Value: value})
+	return err
+}
+
+func (c *Client) ChangeAddressBandwidth(ctx context.Context, id string, bandwidth int) error {
+	value := gen.AddressChangeBandwidthJSONBodyBandwidthMaxMbps(bandwidth)
+	_, err := c.gen.AddressChangeBandwidthWithResponse(ctx, id, gen.AddressChangeBandwidthJSONRequestBody{BandwidthMaxMbps: &value})
 	return err
 }

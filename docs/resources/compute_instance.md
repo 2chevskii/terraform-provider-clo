@@ -39,21 +39,25 @@ resource "clo_compute_instance" "myserv" {
 
 ### Required
 
-- `block_device` (Block List, Min: 1) Disk data for the new instance (see [below for nested schema](#nestedblock--block_device))
 - `flavor_ram` (Number) Amount of RAM of the new instance
 - `flavor_vcpus` (Number) Number of VCPU of the new instance
-- `image_id` (String) ID of the image that will be using
 - `name` (String) Name of the instance. Changing it renames the instance in place.
 - `project_id` (String) ID of the project where the instance should be created
 
 ### Optional
 
 - `addresses` (Block List) Addresses for the new instance (see [below for nested schema](#nestedblock--addresses))
+- `block_device` (Block List) Disk data for the new instance (see [below for nested schema](#nestedblock--block_device))
+- `cpu_type` (String) CPU type of the instance.
+- `deletion` (Block List, Max: 1) Controls attachment cleanup on destroy. Omitting this block deletes all currently attached addresses and network volumes. An empty block retains them all. (see [below for nested schema](#nestedblock--deletion))
+- `image_id` (String) Operating system image ID.
 - `keypairs` (List of String) The list contains the SSH-keypairs IDs
 - `licenses` (Block List) The list contains licences that should be ordered with the instance (see [below for nested schema](#nestedblock--licenses))
 - `password` (String, Sensitive) Password for the new instance
 - `recipe_id` (String) ID of the recipe that will be installed on the instance
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `user_data` (String, Sensitive) Base64-encoded cloud-init script.
+- `volume_id` (String) Existing boot volume ID.
 
 ### Read-Only
 
@@ -61,16 +65,6 @@ resource "clo_compute_instance" "myserv" {
 - `id` (String) ID of the created instance
 - `status` (String) Current status of the instance
 - `switch_status` (String) Power switch position reported by the API (`ON`/`OFF`)
-
-<a id="nestedblock--block_device"></a>
-### Nested Schema for `block_device`
-
-Required:
-
-- `bootable` (Boolean) Is the disk bootable
-- `size` (Number) Requested size of the new disk
-- `storage_type` (String) Storage type of the new disk. Could be `volume` or `local`
-
 
 <a id="nestedblock--addresses"></a>
 ### Nested Schema for `addresses`
@@ -87,6 +81,26 @@ Optional:
 - `bandwidth` (Number) Max address bandwidth, must be 100 or 1024
 
 
+<a id="nestedblock--block_device"></a>
+### Nested Schema for `block_device`
+
+Required:
+
+- `bootable` (Boolean) Is the disk bootable
+- `size` (Number) Requested size of the new disk
+- `storage_type` (String) Storage type of the new disk. Could be `volume` or `local`
+
+
+<a id="nestedblock--deletion"></a>
+### Nested Schema for `deletion`
+
+Optional:
+
+- `address_ids` (Set of String) Attached address IDs to delete.
+- `clear_fstab` (Boolean) Clear filesystem table entries during deletion.
+- `volume_ids` (Set of String) Attached network volume IDs to delete.
+
+
 <a id="nestedblock--licenses"></a>
 ### Nested Schema for `licenses`
 
@@ -97,7 +111,7 @@ Required:
 Optional:
 
 - `name` (String)
-- `value` (Number)
+- `value` (Number, Deprecated)
 
 
 <a id="nestedblock--timeouts"></a>

@@ -28,6 +28,7 @@ resource "clo_network_ip" "fip_1" {
 
 ### Optional
 
+- `bandwidth` (Number) Maximum address bandwidth in Mbps (100 or 1024).
 - `ddos_protection` (Boolean) Should the address be protected from DDoS
 - `ptr` (String) PTR of the attached address
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -35,7 +36,6 @@ resource "clo_network_ip" "fip_1" {
 ### Read-Only
 
 - `address` (String) String representation of the address
-- `bandwidth` (Number) Maximum address bandwidth on mbps
 - `created_in` (String) Timestamp the address was created
 - `id` (String) ID of the created address
 - `is_primary` (Boolean) Should the address be used as primary

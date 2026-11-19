@@ -2,7 +2,7 @@ package clo
 
 import (
 	"context"
-	"strings"
+
 	"time"
 
 	"github.com/clo-ru/terraform-provider-clo/v2/internal/cloapi"
@@ -12,18 +12,18 @@ import (
 
 func resourceSnapshotRestore() *schema.Resource {
 	return &schema.Resource{
-		Description: "Provision a new server from a snapshot. The resource owns the server it creates: " +
-			"destroying it deletes that server along with its volumes and addresses. To then manage the " +
-			"server with the full instance API, import it into a `clo_compute_instance` resource instead.",
+		Description:   "Provision a server from a snapshot. Destroy deletes the server and applies the configured attachment deletion policy.",
 		ReadContext:   resourceSnapshotRestoreRead,
 		CreateContext: resourceSnapshotRestoreCreate,
-		DeleteContext: resourceSnapshotRestoreDelete,
+		DeleteContext: resourceInstanceDelete,
+		UpdateContext: resourceSnapshotRestoreRead,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(30 * time.Minute),
 			Read:   schema.DefaultTimeout(1 * time.Minute),
 			Delete: schema.DefaultTimeout(20 * time.Minute),
 		},
 		Schema: map[string]*schema.Schema{
+			"deletion": serverDeletionSchema(),
 			"snapshot_id": {
 				Description: "ID of the snapshot to restore from. The snapshot must be in the ACTIVE status.",
 				Type:        schema.TypeString,
@@ -103,34 +103,6 @@ func resourceSnapshotRestoreRead(ctx context.Context, d *schema.ResourceData, m 
 		if e := d.Set(k, val); e != nil {
 			return diag.FromErr(e)
 		}
-	}
-	return nil
-}
-
-func resourceSnapshotRestoreDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	cli := m.(*providerMeta).v3
-	id := d.Id()
-
-	srv, err := cli.GetServer(ctx, id)
-	if cloapi.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	var deleteVolumes []string
-	for _, disk := range srv.Disks {
-		if strings.ToLower(disk.StorageType) == "volume" {
-			deleteVolumes = append(deleteVolumes, disk.ID)
-		}
-	}
-
-	if err := cli.DeleteServer(ctx, id, srv.Addresses, deleteVolumes); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := waitInstanceDeleted(ctx, id, cli, d.Timeout(schema.TimeoutDelete)); err != nil {
-		return diag.FromErr(err)
 	}
 	return nil
 }

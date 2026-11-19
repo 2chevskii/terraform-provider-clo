@@ -3,12 +3,12 @@
 page_title: "clo_storage_s3_user_keys Resource - terraform-provider-clo"
 subcategory: ""
 description: |-
-  Create key's pairs for the user
+  Rotate the S3 user's credentials. Destroy forgets the credentials. CLO has no key revocation endpoint.
 ---
 
 # clo_storage_s3_user_keys (Resource)
 
-Create key's pairs for the user
+Rotate the S3 user's credentials. Destroy forgets the credentials. CLO has no key revocation endpoint.
 
 
 

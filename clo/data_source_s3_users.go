@@ -40,7 +40,9 @@ func dataSourceS3Users() *schema.Resource {
 							Description: "Name of the user's tenant. " +
 								"Name of the user's project uses by default",
 							Type: schema.TypeString, Computed: true},
-						"status": {Type: schema.TypeString, Computed: true},
+						"project":       {Type: schema.TypeString, Computed: true},
+						"switch_status": {Type: schema.TypeString, Computed: true},
+						"status":        {Type: schema.TypeString, Computed: true},
 						"max_buckets": {
 							Description: "How many buckets the user could create",
 							Type:        schema.TypeInt, Computed: true},
@@ -86,6 +88,8 @@ func flattenS3UsersResults(pr []cloapi.S3User) []interface{} {
 			"id":             p.ID,
 			"name":           p.Name,
 			"status":         p.Status,
+			"project":        p.Project,
+			"switch_status":  p.SwitchStatus,
 			"tenant":         p.Tenant,
 			"max_buckets":    p.MaxBuckets,
 			"canonical_name": p.CanonicalName,

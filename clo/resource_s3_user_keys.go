@@ -10,7 +10,7 @@ import (
 
 func resourceS3UserKeys() *schema.Resource {
 	return &schema.Resource{
-		Description:   "Create key's pairs for the user",
+		Description:   "Rotate the S3 user's credentials. Destroy forgets the credentials. CLO has no key revocation endpoint.",
 		ReadContext:   resourceS3UserKeysRead,
 		CreateContext: resourceS3UserKeysCreate,
 		DeleteContext: resourceS3UserKeysDelete,
@@ -65,7 +65,12 @@ func resourceS3UserKeysRead(ctx context.Context, d *schema.ResourceData, m inter
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	// Only the access key is returned on read; the secret key (set at create) is left as-is.
+	// CLO only returns the secret during rotation. An external rotation invalidates the stored secret.
+	if accessKey != d.Get("access_key").(string) {
+		if err := d.Set("secret_key", ""); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	if e := d.Set("access_key", accessKey); e != nil {
 		return diag.FromErr(e)
 	}

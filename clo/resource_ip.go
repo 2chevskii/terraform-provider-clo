@@ -7,6 +7,7 @@ import (
 	"github.com/clo-ru/terraform-provider-clo/v2/internal/cloapi"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 const (
@@ -41,12 +42,7 @@ func resourceIp() *schema.Resource {
 				Type:        schema.TypeBool,
 				Computed:    true,
 			},
-			"bandwidth": {
-				Description: "Maximum address bandwidth on mbps",
-				Type:        schema.TypeInt,
-				Optional:    false,
-				Computed:    true,
-			},
+			"bandwidth": addressBandwidthSchema(),
 			"address": {
 				Description: "String representation of the address",
 				Type:        schema.TypeString,
@@ -91,6 +87,11 @@ func resourceIpCreate(ctx context.Context, d *schema.ResourceData, m interface{}
 		return diag.FromErr(err)
 	}
 
+	if bandwidth, ok := d.GetOk("bandwidth"); ok {
+		if err := updateAddressBandwidth(ctx, d, cli, bandwidth.(int)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	if v, ok := d.GetOk("ptr"); ok {
 		if err := cli.ChangeAddressPtr(ctx, id, v.(string)); err != nil {
 			return diag.FromErr(err)
@@ -104,10 +105,17 @@ func resourceIpRead(ctx context.Context, d *schema.ResourceData, m interface{}) 
 	cli := m.(*providerMeta).v3
 
 	addr, err := cli.GetAddress(ctx, d.Id())
+	if cloapi.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("ptr", addr.Ptr); err != nil {
+		return diag.FromErr(err)
+	}
 	if e := d.Set("id", addr.ID); e != nil {
 		return diag.FromErr(e)
 	}
@@ -131,13 +139,18 @@ func resourceIpRead(ctx context.Context, d *schema.ResourceData, m interface{}) 
 
 func resourceIpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
+	if d.HasChange("bandwidth") {
+		if err := updateAddressBandwidth(ctx, d, cli, d.Get("bandwidth").(int)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	if d.HasChange("ptr") {
 		_, c := d.GetChange("ptr")
 		if err := cli.ChangeAddressPtr(ctx, d.Id(), c.(string)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	return nil
+	return resourceIpRead(ctx, d, m)
 }
 
 func resourceIpDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -173,4 +186,14 @@ func waitAddressDeleted(ctx context.Context, id string, cli *cloapi.Client, time
 		}
 		return addr, addr.Status, nil
 	})
+}
+
+func addressBandwidthSchema() *schema.Schema {
+	return &schema.Schema{Type: schema.TypeInt, Optional: true, Computed: true, ValidateFunc: validation.IntInSlice([]int{100, 1024}), Description: "Maximum address bandwidth in Mbps (100 or 1024)."}
+}
+func updateAddressBandwidth(ctx context.Context, d *schema.ResourceData, cli *cloapi.Client, bandwidth int) error {
+	if err := cli.ChangeAddressBandwidth(ctx, d.Id(), bandwidth); err != nil {
+		return err
+	}
+	return waitAddressState(ctx, d.Id(), cli, []string{processingIp}, []string{attachedIp, detachedIp}, d.Timeout(schema.TimeoutUpdate))
 }

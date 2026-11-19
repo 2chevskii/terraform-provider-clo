@@ -9,6 +9,8 @@ import (
 
 // S3User is the provider-facing view of an object-storage user.
 type S3User struct {
+	Project       string
+	SwitchStatus  string
 	ID            string
 	Name          string
 	CanonicalName string
@@ -20,6 +22,7 @@ type S3User struct {
 
 func s3UserFromSchema(r *gen.S3UserSchema) S3User {
 	u := S3User{
+		Project: r.Project, SwitchStatus: r.SwitchStatus,
 		ID:            r.Id,
 		Name:          r.Name,
 		CanonicalName: r.CanonicalName,
@@ -59,18 +62,18 @@ type S3UserCreateParams struct {
 	DefaultBucket         bool
 	MaxBuckets            int
 	UserQuotaMaxSize      int
-	UserQuotaMaxObjects   int
-	BucketQuotaMaxSize    int
-	BucketQuotaMaxObjects int
+	UserQuotaMaxObjects   *int
+	BucketQuotaMaxSize    *int
+	BucketQuotaMaxObjects *int
 }
 
 // S3UserQuotaParams describes a quota update.
 type S3UserQuotaParams struct {
 	MaxBuckets            int
 	UserQuotaMaxSize      int
-	UserQuotaMaxObjects   int
-	BucketQuotaMaxSize    int
-	BucketQuotaMaxObjects int
+	UserQuotaMaxObjects   *int
+	BucketQuotaMaxSize    *int
+	BucketQuotaMaxObjects *int
 }
 
 // S3Keys are an access/secret key pair. SecretKey is only returned on generation.
@@ -97,20 +100,14 @@ func (c *Client) CreateS3User(ctx context.Context, p S3UserCreateParams) (string
 		body.DefaultBucket = &db
 	}
 	body.UserQuota.MaxSize = p.UserQuotaMaxSize
-	if p.UserQuotaMaxObjects > 0 {
-		body.UserQuota.MaxObjects = intPtr(p.UserQuotaMaxObjects)
-	}
-	if p.BucketQuotaMaxSize > 0 || p.BucketQuotaMaxObjects > 0 {
+	body.UserQuota.MaxObjects = p.UserQuotaMaxObjects
+	if p.BucketQuotaMaxSize != nil || p.BucketQuotaMaxObjects != nil {
 		body.BucketQuota = &struct {
 			MaxObjects *int `json:"max_objects,omitempty"`
 			MaxSize    *int `json:"max_size,omitempty"`
 		}{}
-		if p.BucketQuotaMaxSize > 0 {
-			body.BucketQuota.MaxSize = intPtr(p.BucketQuotaMaxSize)
-		}
-		if p.BucketQuotaMaxObjects > 0 {
-			body.BucketQuota.MaxObjects = intPtr(p.BucketQuotaMaxObjects)
-		}
+		body.BucketQuota.MaxSize = p.BucketQuotaMaxSize
+		body.BucketQuota.MaxObjects = p.BucketQuotaMaxObjects
 	}
 
 	resp, err := c.gen.S3UserCreateWithResponse(ctx, p.ProjectID, body)
@@ -166,19 +163,13 @@ func (c *Client) UpdateS3UserQuota(ctx context.Context, id string, p S3UserQuota
 		MaxObjects *int `json:"max_objects,omitempty"`
 		MaxSize    int  `json:"max_size"`
 	}{MaxSize: p.UserQuotaMaxSize}
-	if p.UserQuotaMaxObjects > 0 {
-		body.UserQuota.MaxObjects = intPtr(p.UserQuotaMaxObjects)
-	}
+	body.UserQuota.MaxObjects = p.UserQuotaMaxObjects
 	body.BucketQuota = &struct {
 		MaxObjects *int `json:"max_objects,omitempty"`
 		MaxSize    *int `json:"max_size,omitempty"`
 	}{}
-	if p.BucketQuotaMaxSize > 0 {
-		body.BucketQuota.MaxSize = intPtr(p.BucketQuotaMaxSize)
-	}
-	if p.BucketQuotaMaxObjects > 0 {
-		body.BucketQuota.MaxObjects = intPtr(p.BucketQuotaMaxObjects)
-	}
+	body.BucketQuota.MaxSize = p.BucketQuotaMaxSize
+	body.BucketQuota.MaxObjects = p.BucketQuotaMaxObjects
 	_, err := c.gen.S3UserUpdateQuotaWithResponse(ctx, id, body)
 	return err
 }
@@ -212,4 +203,13 @@ func (c *Client) GetS3UserAccessKey(ctx context.Context, id string) (string, err
 		return "", nil
 	}
 	return *resp.OK.Result.AccessKey, nil
+}
+
+func (c *Client) SetS3UserEnabled(ctx context.Context, id string, enabled bool) error {
+	if enabled {
+		_, err := c.gen.S3UserUnsuspendWithResponse(ctx, id)
+		return err
+	}
+	_, err := c.gen.S3UserSuspendWithResponse(ctx, id)
+	return err
 }

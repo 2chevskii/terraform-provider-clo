@@ -36,6 +36,7 @@ resource "clo_storage_s3_user" "s3_user" {
 - `bucket_quota_max_objects` (Number) How many objects can be created within a bucket
 - `bucket_quota_max_size` (Number) A maximum size of a bucket
 - `default_bucket` (Boolean) Should the default bucket be created with the user
+- `enabled` (Boolean) Whether the S3 user may authenticate. Set false to suspend access.
 - `name` (String) Human-readable name of the user
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `user_quota_max_objects` (Number) How many objects the user can create

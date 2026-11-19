@@ -34,9 +34,9 @@ func resourceS3User() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"project_id": {
 				Description: "ID of the project where the user should be created",
-				Type:        schema.TypeString,
-				Required:    true,
+				Type:        schema.TypeString, Required: true, ForceNew: true,
 			},
+			"enabled": {Type: schema.TypeBool, Optional: true, Computed: true, Description: "Whether the S3 user may authenticate. Set false to suspend access."},
 			"canonical_name": {
 				Description: "Canonical name of the user. The storage uses this name. Should be unique in scope of the tenant",
 				Type:        schema.TypeString,
@@ -68,18 +68,19 @@ func resourceS3User() *schema.Resource {
 				Description: "How many objects the user can create",
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 			},
 			"bucket_quota_max_size": {
 				Description: "A maximum size of a bucket",
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     0,
+				Computed:    true,
 			},
 			"bucket_quota_max_objects": {
 				Description: "How many objects can be created within a bucket",
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     0,
+				Computed:    true,
 			},
 			"user_id": {
 				Description: "ID of the created user",
@@ -105,6 +106,11 @@ func resourceS3UserCreate(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	if raw := d.GetRawConfig().GetAttr("enabled"); raw.IsKnown() && !raw.IsNull() && !raw.True() {
+		if err := setS3UserEnabled(ctx, d, cli, false); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	return resourceS3UserRead(ctx, d, m)
 }
 
@@ -116,9 +122,9 @@ func buildS3UserCreateParams(d *schema.ResourceData) cloapi.S3UserCreateParams {
 		DefaultBucket:         d.Get("default_bucket").(bool),
 		MaxBuckets:            d.Get("max_buckets").(int),
 		UserQuotaMaxSize:      d.Get("user_quota_max_size").(int),
-		UserQuotaMaxObjects:   d.Get("user_quota_max_objects").(int),
-		BucketQuotaMaxSize:    d.Get("bucket_quota_max_size").(int),
-		BucketQuotaMaxObjects: d.Get("bucket_quota_max_objects").(int),
+		UserQuotaMaxObjects:   configuredQuota(d, "user_quota_max_objects"),
+		BucketQuotaMaxSize:    configuredQuota(d, "bucket_quota_max_size"),
+		BucketQuotaMaxObjects: configuredQuota(d, "bucket_quota_max_objects"),
 	}
 }
 
@@ -126,6 +132,11 @@ func resourceS3UserUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 	cli := m.(*providerMeta).v3
 	uId := d.Id()
 
+	if d.HasChange("enabled") {
+		if err := setS3UserEnabled(ctx, d, cli, d.Get("enabled").(bool)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	if d.HasChange("name") {
 		if err := cli.UpdateS3UserName(ctx, uId, d.Get("name").(string)); err != nil {
 			return diag.FromErr(err)
@@ -142,9 +153,9 @@ func resourceS3UserUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		err := cli.UpdateS3UserQuota(ctx, uId, cloapi.S3UserQuotaParams{
 			MaxBuckets:            d.Get("max_buckets").(int),
 			UserQuotaMaxSize:      d.Get("user_quota_max_size").(int),
-			UserQuotaMaxObjects:   d.Get("user_quota_max_objects").(int),
-			BucketQuotaMaxSize:    d.Get("bucket_quota_max_size").(int),
-			BucketQuotaMaxObjects: d.Get("bucket_quota_max_objects").(int),
+			UserQuotaMaxObjects:   configuredQuota(d, "user_quota_max_objects"),
+			BucketQuotaMaxSize:    configuredQuota(d, "bucket_quota_max_size"),
+			BucketQuotaMaxObjects: configuredQuota(d, "bucket_quota_max_objects"),
 		})
 		if err != nil {
 			return diag.FromErr(err)
@@ -156,7 +167,14 @@ func resourceS3UserUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceS3UserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
 	user, err := cli.GetS3User(ctx, d.Id())
+	if cloapi.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("enabled", user.SwitchStatus == "ON"); err != nil {
 		return diag.FromErr(err)
 	}
 	if e := d.Set("user_id", user.ID); e != nil {
@@ -232,4 +250,30 @@ func waitS3UserDeleted(ctx context.Context, id string, cli *cloapi.Client, timeo
 		}
 		return user, user.Status, nil
 	})
+}
+
+func setS3UserEnabled(ctx context.Context, d *schema.ResourceData, cli *cloapi.Client, enabled bool) error {
+	if err := cli.SetS3UserEnabled(ctx, d.Id(), enabled); err != nil {
+		return err
+	}
+	pending, target := "OFF", "ON"
+	if !enabled {
+		pending, target = target, pending
+	}
+	return waitForState(ctx, d.Timeout(schema.TimeoutUpdate), []string{pending}, []string{target}, func() (interface{}, string, error) {
+		user, err := cli.GetS3User(ctx, d.Id())
+		if err != nil {
+			return nil, "", err
+		}
+		return user, user.SwitchStatus, nil
+	})
+}
+
+func configuredQuota(d *schema.ResourceData, key string) *int {
+	raw := d.GetRawConfig().GetAttr(key)
+	if raw.IsNull() || !raw.IsKnown() {
+		return nil
+	}
+	value := d.Get(key).(int)
+	return &value
 }

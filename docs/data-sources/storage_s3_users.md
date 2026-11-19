@@ -39,8 +39,10 @@ Read-Only:
 - `id` (String)
 - `max_buckets` (Number)
 - `name` (String)
+- `project` (String)
 - `quotas` (List of Object) (see [below for nested schema](#nestedobjatt--result--quotas))
 - `status` (String)
+- `switch_status` (String)
 - `tenant` (String)
 
 <a id="nestedobjatt--result--quotas"></a>
