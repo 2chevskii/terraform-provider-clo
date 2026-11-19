@@ -201,7 +201,7 @@ func testAccCheckInstanceDestroy(st *terraform.State) error {
 			return fmt.Errorf("clo instance %s still exists", rs.Primary.ID)
 		}
 		if cloapi.IsNotFound(e) {
-			return nil
+			continue
 		}
 		return e
 	}

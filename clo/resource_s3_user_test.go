@@ -68,9 +68,12 @@ func testAccCheckS3UserDestroy(st *terraform.State) error {
 		}
 		_, e := cli.GetS3User(context.Background(), rs.Primary.ID)
 		if cloapi.IsNotFound(e) {
-			return nil
+			continue
 		}
-		return e
+		if e != nil {
+			return e
+		}
+		return fmt.Errorf("%s %s still exists", rs.Type, rs.Primary.ID)
 	}
 	return nil
 }
