@@ -122,9 +122,9 @@ func buildS3UserCreateParams(d *schema.ResourceData) cloapi.S3UserCreateParams {
 		DefaultBucket:         d.Get("default_bucket").(bool),
 		MaxBuckets:            d.Get("max_buckets").(int),
 		UserQuotaMaxSize:      d.Get("user_quota_max_size").(int),
-		UserQuotaMaxObjects:   configuredQuota(d, "user_quota_max_objects"),
-		BucketQuotaMaxSize:    configuredQuota(d, "bucket_quota_max_size"),
-		BucketQuotaMaxObjects: configuredQuota(d, "bucket_quota_max_objects"),
+		UserQuotaMaxObjects:   configuredInt(d, "user_quota_max_objects"),
+		BucketQuotaMaxSize:    configuredInt(d, "bucket_quota_max_size"),
+		BucketQuotaMaxObjects: configuredInt(d, "bucket_quota_max_objects"),
 	}
 }
 
@@ -153,9 +153,9 @@ func resourceS3UserUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		err := cli.UpdateS3UserQuota(ctx, uId, cloapi.S3UserQuotaParams{
 			MaxBuckets:            d.Get("max_buckets").(int),
 			UserQuotaMaxSize:      d.Get("user_quota_max_size").(int),
-			UserQuotaMaxObjects:   configuredQuota(d, "user_quota_max_objects"),
-			BucketQuotaMaxSize:    configuredQuota(d, "bucket_quota_max_size"),
-			BucketQuotaMaxObjects: configuredQuota(d, "bucket_quota_max_objects"),
+			UserQuotaMaxObjects:   configuredInt(d, "user_quota_max_objects"),
+			BucketQuotaMaxSize:    configuredInt(d, "bucket_quota_max_size"),
+			BucketQuotaMaxObjects: configuredInt(d, "bucket_quota_max_objects"),
 		})
 		if err != nil {
 			return diag.FromErr(err)
@@ -269,7 +269,7 @@ func setS3UserEnabled(ctx context.Context, d *schema.ResourceData, cli *cloapi.C
 	})
 }
 
-func configuredQuota(d *schema.ResourceData, key string) *int {
+func configuredInt(d *schema.ResourceData, key string) *int {
 	raw := d.GetRawConfig().GetAttr(key)
 	if raw.IsNull() || !raw.IsKnown() {
 		return nil

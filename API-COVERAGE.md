@@ -2,7 +2,23 @@
 
 Reviewed on 2026-11-19 against release **v2.8.0**, commit `11744b8f4a86a6081acbe99c6a525c4ef8741ae8`. The provider registers 17 resources and 27 data sources. Of 129 operations in the public v2 OpenAPI document, **91 have a Terraform call path, 1 has an unused SDK adapter, and 37 have no provider call**. A call path may serve only refresh, polling or deletion. It does not imply a standalone data source or full control of the request. [Registry release](https://registry.terraform.io/providers/clo-ru/clo/2.8.0) · [Registration](clo/provider.go) · [CLO guide](https://clo.ru/api) · [Live OpenAPI](https://api.clo.ru/openapi.json)
 
-## Gaps that affect Terraform plans
+## Fork implementation status
+
+On 2026-11-19 all 129 live OpenAPI operation IDs matched production SDK calls in this fork. The inventory below records the original upstream v2.8.0 comparison. Endpoint coverage alone does not establish field, import, pagination, lifecycle or live-service parity.
+
+| Formerly missing operation group | Terraform entry point in this fork |
+|---|---|
+| Project create, update metadata, start, stop, delete | [Project resource](docs/resources/project.md) |
+| Account-wide and single-project limit updates | [Account limits](docs/resources/account_limits.md), [project limits](docs/resources/project_limits.md) |
+| Server rescue and reboot | [Instance action receipt](docs/resources/compute_instance_action.md) |
+| Server license create, update and delete | [Instance license](docs/resources/compute_instance_license.md) |
+| Volume metadata update | [Volume](docs/resources/disks_volume.md) |
+| Address bandwidth update | [Address](docs/resources/network_ip.md), [attachment](docs/resources/network_ip_attach.md) |
+| S3 suspend and unsuspend | [S3 user](docs/resources/storage_s3_user.md) |
+| Project-wide DBaaS database listing | [Database lookup](docs/data-sources/dbaas_databases.md) |
+| 19 GET endpoints, guest-agent check and console session | [Registered data sources](clo/provider.go), [API lookup schemas](clo/data_source_api_schemas.go) |
+
+## Upstream gaps that affect Terraform plans
 
 | Area | Effect | Source |
 |---|---|---|

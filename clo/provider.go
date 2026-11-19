@@ -33,6 +33,8 @@ func Provider() *schema.Provider {
 		},
 		ConfigureContextFunc: configureProvider,
 		ResourcesMap: map[string]*schema.Resource{
+			"clo_account_limits": resourceLimits(true), "clo_project_limits": resourceLimits(false),
+			"clo_compute_instance_license": resourceInstanceLicense(), "clo_compute_instance_action": resourceInstanceAction(),
 			"clo_project":                   resourceProject(),
 			"clo_compute_instance":          resourceInstance(),
 			"clo_compute_instance_power":    resourceInstancePower(),
