@@ -70,6 +70,8 @@ func resourceDbaasBackup() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 			},
+			"datastore_id": computedField(schema.TypeString),
+			"databases":    backupDatabasesSchema(),
 			"status": {
 				Description: "Lifecycle status of the backup",
 				Type:        schema.TypeString,
@@ -155,6 +157,8 @@ func resourceDbaasBackupRead(ctx context.Context, d *schema.ResourceData, m inte
 		"id":                b.ID,
 		"name":              b.Name,
 		"project":           b.Project,
+		"datastore_id":      b.DatastoreID,
+		"databases":         flattenBackupDatabases(b.Databases),
 		"status":            b.Status,
 		"type":              b.Type,
 		"size":              b.Size,

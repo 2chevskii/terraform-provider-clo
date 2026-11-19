@@ -43,6 +43,8 @@ Read-Only:
 - `cluster_id` (String)
 - `created_in` (String)
 - `data_size` (Number)
+- `databases` (List of Object) (see [below for nested schema](#nestedobjatt--result--databases))
+- `datastore_id` (String)
 - `datastore_name` (String)
 - `datastore_version` (String)
 - `id` (String)
@@ -52,5 +54,14 @@ Read-Only:
 - `size` (Number)
 - `status` (String)
 - `type` (String)
+
+<a id="nestedobjatt--result--databases"></a>
+### Nested Schema for `result.databases`
+
+Read-Only:
+
+- `admin_username` (String)
+- `id` (String)
+- `name` (String)
 
 

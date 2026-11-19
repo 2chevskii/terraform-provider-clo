@@ -12,6 +12,8 @@ import (
 // Backup is the provider-facing view of a dbaas backup. A backup is either FULL
 // (created from a cluster) or PARTIAL (created from a single database).
 type Backup struct {
+	DatastoreID      string
+	Databases        []BackupDatabase
 	ID               string
 	Name             string
 	ClusterID        string
@@ -26,6 +28,12 @@ type Backup struct {
 	CreatedIn        string
 }
 
+type BackupDatabase struct {
+	ID            string
+	Name          string
+	AdminUsername string
+}
+
 func backupFromSchema(r *gen.DbaasBackupSchema) Backup {
 	b := Backup{
 		ID:               r.Id,
@@ -38,6 +46,10 @@ func backupFromSchema(r *gen.DbaasBackupSchema) Backup {
 		DatastoreName:    r.Datastore.Name,
 		DatastoreVersion: r.Datastore.Version,
 		CreatedIn:        r.CreatedIn.Format(time.RFC3339),
+	}
+	b.DatastoreID = r.Datastore.Id
+	for _, db := range r.Databases {
+		b.Databases = append(b.Databases, BackupDatabase{ID: db.Id, Name: db.Name, AdminUsername: db.AdminUsername})
 	}
 	if r.DataSize != nil {
 		b.DataSize = *r.DataSize

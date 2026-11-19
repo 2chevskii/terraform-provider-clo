@@ -29,13 +29,21 @@ data "clo_network_ip" "address_1" {
 
 - `address` (String) String representation of the address
 - `attached_to` (List of Object) Information about where the address is attached (see [below for nested schema](#nestedatt--attached_to))
+- `bandwidth` (Number)
+- `bill_item_id` (Number)
 - `created_in` (String) Timestamp the address was created
 - `ddos_protection` (Boolean) Is the address protected from DDoS
+- `external` (Boolean)
+- `gateway` (String)
 - `id` (String) The ID of this resource.
 - `is_primary` (Boolean) Is the IP-address using as primary
+- `mac_addr` (String)
+- `mask` (String)
 - `ptr` (String) PTR of the attached address
 - `status` (String)
 - `type` (String) Type of the attached address. Might be one of: FLOATING, FIXED, FREE, VROUTER.
+- `updated_in` (String)
+- `version` (Number)
 
 <a id="nestedatt--attached_to"></a>
 ### Nested Schema for `attached_to`

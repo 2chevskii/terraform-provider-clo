@@ -28,17 +28,33 @@ data "clo_compute_instance" "myserv" {
 ### Read-Only
 
 - `addresses` (List of String) Information about addresses attached to the instance
+- `admin_key_status` (String)
+- `cpu_type` (String)
 - `created_in` (String) Timestamp the instance was created
+- `datacenter` (String)
 - `disk_data` (List of Object) Information about disks attached to the instance (see [below for nested schema](#nestedatt--disk_data))
+- `flavor_disk` (Number)
 - `flavor_ram` (Number) Amount of RAM of the instance
 - `flavor_vcpus` (Number) Number of VCPU of the instance
 - `guest_agent` (Boolean) Is guest agent installed on the instance
 - `image` (String) ID of the image from which the instance was installed
+- `image_min_disk` (Number)
+- `image_min_ram` (Number)
 - `name` (String) Name of the instance
+- `os_distribution` (String)
+- `os_family` (String)
+- `os_version` (String)
+- `primary_address` (String)
 - `project_id` (String) ID of the project that owns instances
 - `recipe` (String) ID of the recipe that was installed on the instance
+- `recipe_min_disk` (Number)
+- `recipe_min_ram` (Number)
+- `recipe_min_vcpus` (Number)
+- `recipe_status` (String)
 - `rescue_mode` (String) Describes is the instance in rescue mode
+- `snapshots` (List of String)
 - `status` (String) Current status of the instance
+- `switch_status` (String)
 
 <a id="nestedatt--disk_data"></a>
 ### Nested Schema for `disk_data`

@@ -42,13 +42,21 @@ Read-Only:
 
 - `address` (String)
 - `attached_to` (List of Object) (see [below for nested schema](#nestedobjatt--result--attached_to))
+- `bandwidth` (Number)
+- `bill_item_id` (Number)
 - `created_in` (String)
 - `ddos_protection` (Boolean)
+- `external` (Boolean)
+- `gateway` (String)
 - `id` (String)
 - `is_primary` (Boolean)
+- `mac_addr` (String)
+- `mask` (String)
 - `ptr` (String)
 - `status` (String)
 - `type` (String)
+- `updated_in` (String)
+- `version` (Number)
 
 <a id="nestedobjatt--result--attached_to"></a>
 ### Nested Schema for `result.attached_to`

@@ -2,6 +2,7 @@ package clo
 
 import (
 	"context"
+	"github.com/clo-ru/terraform-provider-clo/v2/internal/cloapi"
 	"strconv"
 	"time"
 
@@ -31,6 +32,8 @@ func dataSourceDbaasBackups() *schema.Resource {
 						"name":              {Type: schema.TypeString, Computed: true},
 						"cluster_id":        {Type: schema.TypeString, Computed: true},
 						"project":           {Type: schema.TypeString, Computed: true},
+						"datastore_id":      computedField(schema.TypeString),
+						"databases":         backupDatabasesSchema(),
 						"status":            {Type: schema.TypeString, Computed: true},
 						"type":              {Type: schema.TypeString, Computed: true},
 						"size":              {Type: schema.TypeInt, Computed: true},
@@ -63,6 +66,8 @@ func dataSourceDbaasBackupsRead(ctx context.Context, d *schema.ResourceData, m i
 			"name":              b.Name,
 			"cluster_id":        b.ClusterID,
 			"project":           b.Project,
+			"datastore_id":      b.DatastoreID,
+			"databases":         flattenBackupDatabases(b.Databases),
 			"status":            b.Status,
 			"type":              b.Type,
 			"size":              b.Size,
@@ -78,4 +83,15 @@ func dataSourceDbaasBackupsRead(ctx context.Context, d *schema.ResourceData, m i
 	}
 	d.SetId(strconv.FormatInt(time.Now().Unix(), 10))
 	return nil
+}
+
+func backupDatabasesSchema() *schema.Schema {
+	return recordFields(map[string]*schema.Schema{"id": computedField(schema.TypeString), "name": computedField(schema.TypeString), "admin_username": computedField(schema.TypeString)})
+}
+func flattenBackupDatabases(dbs []cloapi.BackupDatabase) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dbs))
+	for _, db := range dbs {
+		out = append(out, map[string]interface{}{"id": db.ID, "name": db.Name, "admin_username": db.AdminUsername})
+	}
+	return out
 }

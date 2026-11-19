@@ -2,6 +2,7 @@ package cloapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -12,6 +13,19 @@ import (
 // Volume is the provider-facing view of a volume. Adapter types deliberately do not
 // expose generated SDK types, so generated name/shape changes stay inside this package.
 type Volume struct {
+	ImageMinDisk   int
+	ImageMinRAM    int
+	OSFamily       string
+	OSDistribution string
+	OSVersion      string
+	RecipeMinDisk  int
+	RecipeMinRAM   int
+	RecipeMinVCPUs int
+	Snapshots      []string
+	FileSystem     *string
+	RecipeName     string
+	LicensesJSON   string
+
 	ID           string
 	Name         string
 	Status       string
@@ -32,6 +46,31 @@ func volumeFromSchema(r *gen.VolumeSchema) Volume {
 		Size:        r.Size,
 		Bootable:    r.Bootable,
 		CreatedIn:   r.CreatedIn.Format(time.RFC3339),
+	}
+	if r.Snapshots != nil {
+		v.Snapshots = *r.Snapshots
+	}
+	if r.Image != nil {
+		v.ImageMinDisk = r.Image.MinDisk
+		v.ImageMinRAM = r.Image.MinRam
+		v.OSFamily = r.Image.OperationSystem.OsFamily
+		v.OSDistribution = r.Image.OperationSystem.Distribution
+		v.OSVersion = r.Image.OperationSystem.Version
+	}
+	if r.Recipe != nil {
+		v.RecipeMinDisk = r.Recipe.MinDisk
+		v.RecipeMinRAM = r.Recipe.MinRam
+		v.RecipeMinVCPUs = r.Recipe.MinVcpus
+	}
+	v.FileSystem = r.FileSystem
+	if r.Licenses != nil {
+		encoded, _ := json.Marshal(*r.Licenses)
+		v.LicensesJSON = string(encoded)
+	} else {
+		v.LicensesJSON = "[]"
+	}
+	if r.Recipe != nil {
+		v.RecipeName = r.Recipe.Name
 	}
 	if r.Undetachable != nil {
 		v.Undetachable = *r.Undetachable

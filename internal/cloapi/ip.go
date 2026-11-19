@@ -11,6 +11,14 @@ import (
 
 // Address is the provider-facing view of an IP address.
 type Address struct {
+	UpdatedIn  string
+	External   bool
+	MAC        *string
+	Mask       *string
+	Gateway    *string
+	Version    *int
+	BillItemID *int
+
 	ID             string
 	Status         string
 	Address        string
@@ -31,6 +39,7 @@ type AddressAttachedTo struct {
 
 func addressFromSchema(r *gen.AddressSchema) Address {
 	a := Address{
+		UpdatedIn: r.UpdatedIn.Format(time.RFC3339), External: r.External, MAC: r.MacAddr, Mask: r.Mask, Gateway: r.Gateway, Version: r.Version, BillItemID: r.BillItemId,
 		ID:             r.Id,
 		Status:         r.Status,
 		Type:           r.Type,

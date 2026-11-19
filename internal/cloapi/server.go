@@ -12,6 +12,21 @@ import (
 // Server is the provider-facing view of a compute instance. Status is the
 // lifecycle state; SwitchStatus is the ON/OFF power state toggled by Start/Stop.
 type Server struct {
+	ImageMinDisk   int
+	ImageMinRAM    int
+	OSFamily       string
+	OSDistribution string
+	OSVersion      string
+	RecipeMinDisk  int
+	RecipeMinRAM   int
+	RecipeMinVCPUs int
+	Snapshots      []string
+	AdminKeyStatus string
+	Datacenter     string
+	PrimaryAddress *string
+	FlavorDisk     *int
+	RecipeStatus   string
+
 	ID           string
 	Name         string
 	Status       string
@@ -46,7 +61,26 @@ func serverFromSchema(r *gen.ServerSchema) Server {
 		GuestAgent:   r.GuestAgent,
 		CreatedIn:    r.CreatedIn.Format(time.RFC3339),
 	}
+	if r.Snapshots != nil {
+		s.Snapshots = *r.Snapshots
+	}
+	if r.Image != nil {
+		s.ImageMinDisk = r.Image.MinDisk
+		s.ImageMinRAM = r.Image.MinRam
+		s.OSFamily = r.Image.OperationSystem.OsFamily
+		s.OSDistribution = r.Image.OperationSystem.Distribution
+		s.OSVersion = r.Image.OperationSystem.Version
+	}
+	if r.Recipe != nil {
+		s.RecipeMinDisk = r.Recipe.MinDisk
+		s.RecipeMinRAM = r.Recipe.MinRam
+		s.RecipeMinVCPUs = r.Recipe.MinVcpus
+	}
+	s.AdminKeyStatus = r.AdminKeyStatus
+	s.Datacenter = r.Datacenter
+	s.PrimaryAddress = r.PrimaryAddress
 	if r.Flavor != nil {
+		s.FlavorDisk = r.Flavor.Disk
 		s.CPUType = r.Flavor.CpuType
 		s.FlavorRam = r.Flavor.Ram
 		s.FlavorVcpus = r.Flavor.Vcpus
@@ -55,6 +89,7 @@ func serverFromSchema(r *gen.ServerSchema) Server {
 		s.ImageName = r.Image.OperationSystem.Distribution + " " + r.Image.OperationSystem.Version
 	}
 	if r.Recipe != nil {
+		s.RecipeStatus = r.Recipe.Status
 		s.RecipeName = r.Recipe.Name
 	}
 	if r.Addresses != nil {

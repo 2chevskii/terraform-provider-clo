@@ -32,9 +32,21 @@ data "clo_disks_volume" "volume_1" {
 - `created_in` (String) Timestamp the volume was created
 - `description` (String)
 - `device` (String) Represents the filesystem's device name, for example: `/dev/vdb`
+- `file_system` (String)
 - `id` (String) The ID of this resource.
+- `image_min_disk` (Number)
+- `image_min_ram` (Number)
+- `licenses_json` (String)
 - `name` (String) Human-readable name of the volume
+- `os_distribution` (String)
+- `os_family` (String)
+- `os_version` (String)
+- `recipe_min_disk` (Number)
+- `recipe_min_ram` (Number)
+- `recipe_min_vcpus` (Number)
+- `recipe_name` (String)
 - `size` (Number) Size of the volume in Gb
+- `snapshots` (List of String)
 - `status` (String)
 - `undetachable` (Boolean) Can the volume be detached from the instance
 
