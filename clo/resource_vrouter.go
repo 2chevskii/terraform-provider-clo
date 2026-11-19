@@ -25,6 +25,7 @@ const (
 
 func resourceVrouter() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Manage a virtual router in the project. `enabled` toggles the router's power state (start/stop).",
 		ReadContext:   resourceVrouterRead,
 		CreateContext: resourceVrouterCreate,

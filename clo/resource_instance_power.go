@@ -11,6 +11,7 @@ import (
 
 func resourceInstancePower() *schema.Resource {
 	return &schema.Resource{
+		Importer: &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description: "Manage the power state of a compute instance independently of its configuration. " +
 			"Power management is opt-in: without this resource the instance is left in whatever state it " +
 			"boots into. Destroying this resource stops managing power — it does not change the instance's " +

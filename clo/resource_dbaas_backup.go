@@ -21,6 +21,7 @@ const (
 
 func resourceDbaasBackup() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Create a backup of a managed-database (dbaas) cluster or a single database. Set `cluster_id` for a FULL backup or `database_id` for a PARTIAL backup (exactly one is required).",
 		ReadContext:   resourceDbaasBackupRead,
 		CreateContext: resourceDbaasBackupCreate,
@@ -151,8 +152,6 @@ func resourceDbaasBackupRead(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 	// cluster_id / database_id are write-only inputs: the detail only ever
-	// reports the parent cluster, so setting them here would drift a PARTIAL
-	// backup's config. The configured values are preserved in state as-is.
 	fields := map[string]interface{}{
 		"id":                b.ID,
 		"name":              b.Name,
@@ -167,6 +166,19 @@ func resourceDbaasBackupRead(ctx context.Context, d *schema.ResourceData, m inte
 		"datastore_name":    b.DatastoreName,
 		"datastore_version": b.DatastoreVersion,
 		"created_in":        b.CreatedIn,
+	}
+	if _, clusterSet := d.GetOk("cluster_id"); !clusterSet {
+		if _, dbSet := d.GetOk("database_id"); !dbSet {
+			switch b.Type {
+			case "FULL":
+				fields["cluster_id"] = b.ClusterID
+			case "PARTIAL":
+				if len(b.Databases) != 1 {
+					return diag.Errorf("cannot determine the source database for backup %s", d.Id())
+				}
+				fields["database_id"] = b.Databases[0].ID
+			}
+		}
 	}
 	for k, val := range fields {
 		if e := d.Set(k, val); e != nil {

@@ -52,4 +52,10 @@ Optional:
 - `delete` (String)
 - `read` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_compute_snapshot.example SNAPSHOT_ID
+```

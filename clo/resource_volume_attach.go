@@ -11,6 +11,7 @@ import (
 
 func resourceVolumeAttach() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Attach the volume to an instance",
 		ReadContext:   resourceVolumeAttachRead,
 		CreateContext: resourceVolumeAttachCreate,
@@ -77,9 +78,16 @@ func resourceVolumeAttachRead(ctx context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if vol.Attachment == nil || vol.Attachment.ID != d.Get("instance_id").(string) {
+	instance := d.Get("instance_id").(string)
+	if vol.Attachment == nil || (instance != "" && vol.Attachment.ID != instance) {
 		d.SetId("")
 		return nil
+	}
+	if err := d.Set("volume_id", d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("instance_id", vol.Attachment.ID); err != nil {
+		return diag.FromErr(err)
 	}
 	device := vol.Attachment.Device
 	if e := d.Set("device", device); e != nil {

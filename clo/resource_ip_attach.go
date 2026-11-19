@@ -11,6 +11,7 @@ import (
 
 func resourceIpAttach() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Attach an address to the entity, for example: a loadbalancer or a server",
 		ReadContext:   resourceIpAttachRead,
 		CreateContext: resourceIpAttachCreate,
@@ -86,9 +87,16 @@ func resourceIpAttachRead(ctx context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if addr.AttachedTo == nil || addr.AttachedTo.ID != d.Get("entity_id").(string) || addr.AttachedTo.Entity != d.Get("entity_name").(string) {
+	target := d.Get("entity_id").(string)
+	kind := d.Get("entity_name").(string)
+	if addr.AttachedTo == nil || (target != "" && addr.AttachedTo.ID != target) || (kind != "" && addr.AttachedTo.Entity != kind) {
 		d.SetId("")
 		return nil
+	}
+	for k, v := range map[string]string{"entity_id": addr.AttachedTo.ID, "entity_name": addr.AttachedTo.Entity, "address_id": addr.ID} {
+		if err := d.Set(k, v); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if err := d.Set("bandwidth", addr.Bandwidth); err != nil {
 		return diag.FromErr(err)

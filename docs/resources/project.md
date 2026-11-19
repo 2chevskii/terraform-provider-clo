@@ -39,4 +39,10 @@ Optional:
 
 - `default` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_project.example PROJECT_ID
+```

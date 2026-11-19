@@ -10,6 +10,7 @@ import (
 
 func resourceKeypair() *schema.Resource {
 	return &schema.Resource{
+		Importer: scopedImporter("project_id"),
 		Description: "Manage an SSH keypair in the project. Provide `public_key` to import an " +
 			"existing key, or omit it to have the API generate one (the generated `private_key` is " +
 			"returned only once and stored in state).",

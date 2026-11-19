@@ -25,6 +25,7 @@ const (
 
 func resourceInstance() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Project compute instance",
 		ReadContext:   resourceInstanceRead,
 		CreateContext: resourceInstanceCreate,
@@ -251,6 +252,7 @@ func resourceInstanceRead(ctx context.Context, d *schema.ResourceData, m interfa
 		"name":          srv.Name,
 		"status":        srv.Status,
 		"switch_status": srv.SwitchStatus,
+		"project_id":    srv.Project,
 		"created_in":    srv.CreatedIn,
 		"flavor_ram":    srv.FlavorRam, "flavor_vcpus": srv.FlavorVcpus, "cpu_type": srv.CPUType,
 	}

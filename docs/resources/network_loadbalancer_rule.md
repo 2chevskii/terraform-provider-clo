@@ -54,4 +54,10 @@ Optional:
 - `delete` (String)
 - `read` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_network_loadbalancer_rule.example RULE_ID
+```

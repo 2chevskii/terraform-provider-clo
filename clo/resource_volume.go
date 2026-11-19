@@ -25,6 +25,7 @@ const (
 
 func resourceVolume() *schema.Resource {
 	return &schema.Resource{
+		Importer:      scopedImporter("project_id"),
 		Description:   "Create a new volume in the project",
 		ReadContext:   resourceVolumeRead,
 		CreateContext: resourceVolumeCreate,

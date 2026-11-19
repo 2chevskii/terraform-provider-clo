@@ -1,0 +1,1 @@
+terraform import clo_disks_volume.example PROJECT_ID/VOLUME_ID

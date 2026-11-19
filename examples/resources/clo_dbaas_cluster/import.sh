@@ -1,0 +1,1 @@
+terraform import clo_dbaas_cluster.example CLUSTER_ID

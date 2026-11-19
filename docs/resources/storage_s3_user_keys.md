@@ -39,4 +39,11 @@ Optional:
 - `read` (String)
 - `update` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Import reads the current access key. CLO returns the secret only when keys are generated.
+terraform import clo_storage_s3_user_keys.example USER_ID
+```

@@ -23,6 +23,7 @@ const (
 
 func resourceSnapshot() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Take a point-in-time snapshot of a server. Snapshots are stored as private images and auto-expire at `deleted_in`.",
 		ReadContext:   resourceSnapshotRead,
 		CreateContext: resourceSnapshotCreate,
@@ -109,9 +110,8 @@ func resourceSnapshotRead(ctx context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	// server_id is a write-only input; parent_server (from detail) is its
-	// read-back counterpart, so server_id is preserved in state as configured.
 	fields := map[string]interface{}{
+		"server_id":     s.ParentServer,
 		"id":            s.ID,
 		"name":          s.Name,
 		"status":        s.Status,

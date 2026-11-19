@@ -12,6 +12,7 @@ import (
 
 func resourceSnapshotRestore() *schema.Resource {
 	return &schema.Resource{
+		Importer:      scopedImporter("snapshot_id"),
 		Description:   "Provision a server from a snapshot. Destroy deletes the server and applies the configured attachment deletion policy.",
 		ReadContext:   resourceSnapshotRestoreRead,
 		CreateContext: resourceSnapshotRestoreCreate,
@@ -90,9 +91,8 @@ func resourceSnapshotRestoreRead(ctx context.Context, d *schema.ResourceData, m 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	// name is a write-only input (the server's name equals it) and is preserved
-	// in state as configured.
 	fields := map[string]interface{}{
+		"name":       srv.Name,
 		"id":         srv.ID,
 		"status":     srv.Status,
 		"project":    srv.Project,

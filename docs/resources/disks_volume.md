@@ -54,4 +54,10 @@ Optional:
 - `read` (String)
 - `update` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_disks_volume.example PROJECT_ID/VOLUME_ID
+```

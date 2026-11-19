@@ -40,3 +40,11 @@ Manage a license installed on a server. Import using instance_id/license_id.
 Optional:
 
 - `default` (String)
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_compute_instance_license.example INSTANCE_ID/LICENSE_ID
+```

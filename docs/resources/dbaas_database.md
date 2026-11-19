@@ -55,4 +55,11 @@ Optional:
 - `read` (String)
 - `update` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# The API does not return the admin password. A configured password may rotate on the next apply.
+terraform import clo_dbaas_database.example DATABASE_ID
+```

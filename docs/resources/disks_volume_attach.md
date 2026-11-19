@@ -48,4 +48,11 @@ Optional:
 - `read` (String)
 - `update` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# The volume must currently be attached.
+terraform import clo_disks_volume_attach.example VOLUME_ID
+```

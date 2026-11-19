@@ -51,4 +51,11 @@ Optional:
 - `read` (String)
 - `update` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# The address must currently be attached.
+terraform import clo_network_ip_attach.example ADDRESS_ID
+```

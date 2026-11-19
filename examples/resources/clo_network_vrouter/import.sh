@@ -1,0 +1,1 @@
+terraform import clo_network_vrouter.example ROUTER_ID

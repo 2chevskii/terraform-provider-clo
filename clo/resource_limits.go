@@ -106,7 +106,7 @@ func resourceLimits(account bool) *schema.Resource {
 		}
 		return nil
 	}
-	return &schema.Resource{Description: desc, Schema: fields, CreateContext: apply, UpdateContext: apply, ReadContext: read, DeleteContext: schema.NoopContext, Timeouts: &schema.ResourceTimeout{Default: schema.DefaultTimeout(10 * time.Minute)}}
+	return &schema.Resource{Importer: limitImporter(account), Description: desc, Schema: fields, CreateContext: apply, UpdateContext: apply, ReadContext: read, DeleteContext: schema.NoopContext, Timeouts: &schema.ResourceTimeout{Default: schema.DefaultTimeout(10 * time.Minute)}}
 }
 
 func limitValues(d *schema.ResourceData, account bool) map[string]map[string]int {
@@ -145,7 +145,10 @@ func readLimitValues(ctx context.Context, cli *cloapi.Client, id string, account
 		if account {
 			project, _ = row["project_id"].(string)
 		}
-		if _, ok := managed[name][project]; !ok || row["max"] == nil || row["enabled"] == false {
+		if !slices.Contains(writableLimits, strings.ReplaceAll(name, "-", "_")) {
+			continue
+		}
+		if _, ok := managed[name][project]; (managed != nil && !ok) || row["max"] == nil || row["enabled"] == false {
 			continue
 		}
 		number, ok := row["max"].(json.Number)
@@ -162,4 +165,38 @@ func readLimitValues(ctx context.Context, cli *cloapi.Client, id string, account
 		actual[name][project] = int(max)
 	}
 	return actual, nil
+}
+
+func limitImporter(account bool) *schema.ResourceImporter {
+	return &schema.ResourceImporter{StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+		if account && d.Id() != "account" {
+			return nil, fmt.Errorf("use account as the account limits import ID")
+		}
+		values, err := readLimitValues(ctx, m.(*providerMeta).v3, d.Id(), account, nil)
+		if err != nil {
+			return nil, err
+		}
+		if len(values) == 0 {
+			return nil, fmt.Errorf("no enabled writable limits found for %s", d.Id())
+		}
+		if account {
+			for name, projects := range values {
+				if err := d.Set(strings.ReplaceAll(name, "-", "_"), projects); err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			if err := d.Set("project_id", d.Id()); err != nil {
+				return nil, err
+			}
+			limits := map[string]int{}
+			for name, projects := range values {
+				limits[name] = projects[d.Id()]
+			}
+			if err := d.Set("limits", limits); err != nil {
+				return nil, err
+			}
+		}
+		return []*schema.ResourceData{d}, nil
+	}}
 }

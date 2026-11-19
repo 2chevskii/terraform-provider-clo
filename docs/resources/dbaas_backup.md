@@ -74,4 +74,10 @@ Read-Only:
 - `id` (String)
 - `name` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_dbaas_backup.example BACKUP_ID
+```

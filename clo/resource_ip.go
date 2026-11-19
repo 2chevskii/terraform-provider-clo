@@ -19,6 +19,7 @@ const (
 
 func resourceIp() *schema.Resource {
 	return &schema.Resource{
+		Importer:      scopedImporter("project_id"),
 		Description:   "Create a new address in the project",
 		ReadContext:   resourceIpRead,
 		CreateContext: resourceIpCreate,
@@ -113,6 +114,9 @@ func resourceIpRead(ctx context.Context, d *schema.ResourceData, m interface{}) 
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("ddos_protection", addr.DdosProtection); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("ptr", addr.Ptr); err != nil {
 		return diag.FromErr(err)
 	}

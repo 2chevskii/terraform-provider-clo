@@ -34,3 +34,12 @@ Manage the specified project limits. Removing a limit or destroying this resourc
 Optional:
 
 - `default` (String)
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+# Imports all enabled writable limits in the project.
+terraform import clo_project_limits.example PROJECT_ID
+```

@@ -1,0 +1,1 @@
+terraform import clo_compute_instance_power.example INSTANCE_ID

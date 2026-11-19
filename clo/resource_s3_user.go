@@ -20,6 +20,7 @@ const (
 
 func resourceS3User() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Create a new user of the object storage",
 		ReadContext:   resourceS3UserRead,
 		CreateContext: resourceS3UserCreate,
@@ -58,6 +59,7 @@ func resourceS3User() *schema.Resource {
 				Description: "Human-readable name of the user",
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 			},
 			"user_quota_max_size": {
 				Description: "Total size of the objects the user can store",
@@ -173,6 +175,11 @@ func resourceS3UserRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	for k, v := range map[string]string{"project_id": user.Project, "name": user.Name, "canonical_name": user.CanonicalName} {
+		if err := d.Set(k, v); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if err := d.Set("enabled", user.SwitchStatus == "ON"); err != nil {
 		return diag.FromErr(err)

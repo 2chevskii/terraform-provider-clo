@@ -22,6 +22,7 @@ const (
 
 func resourceLoadBalancerRule() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Manage a listener rule on a load balancer (maps an external port to an internal port on the backend).",
 		ReadContext:   resourceLoadBalancerRuleRead,
 		CreateContext: resourceLoadBalancerRuleCreate,
@@ -110,6 +111,7 @@ func resourceLoadBalancerRuleRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 	fields := map[string]interface{}{
+		"address_id": r.Address, "loadbalancer_id": r.Loadbalancer,
 		"id":                     r.ID,
 		"status":                 r.Status,
 		"server":                 r.Server,

@@ -46,4 +46,11 @@ resource "clo_compute_keypair" "generated" {
 - `id` (String) ID of the keypair
 - `private_key` (String, Sensitive) Private key of a generated keypair. Only set when `public_key` was not provided.
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Import retrieves the public key. The original private key cannot be recovered.
+terraform import clo_compute_keypair.example PROJECT_ID/KEYPAIR_ID
+```

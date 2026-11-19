@@ -1,0 +1,1 @@
+terraform import clo_network_ip.example PROJECT_ID/ADDRESS_ID

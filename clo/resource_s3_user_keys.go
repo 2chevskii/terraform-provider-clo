@@ -2,6 +2,7 @@ package clo
 
 import (
 	"context"
+	"github.com/clo-ru/terraform-provider-clo/v2/internal/cloapi"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -10,6 +11,7 @@ import (
 
 func resourceS3UserKeys() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Rotate the S3 user's credentials. Destroy forgets the credentials. CLO has no key revocation endpoint.",
 		ReadContext:   resourceS3UserKeysRead,
 		CreateContext: resourceS3UserKeysCreate,
@@ -62,7 +64,14 @@ func resourceS3UserKeysCreate(ctx context.Context, d *schema.ResourceData, m int
 func resourceS3UserKeysRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cli := m.(*providerMeta).v3
 	accessKey, err := cli.GetS3UserAccessKey(ctx, d.Id())
+	if cloapi.IsNotFound(err) {
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("user_id", d.Id()); err != nil {
 		return diag.FromErr(err)
 	}
 	// CLO only returns the secret during rotation. An external rotation invalidates the stored secret.

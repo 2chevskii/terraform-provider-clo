@@ -1,0 +1,1 @@
+terraform import clo_compute_snapshot.example SNAPSHOT_ID

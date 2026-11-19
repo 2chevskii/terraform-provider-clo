@@ -21,6 +21,7 @@ const (
 
 func resourceDbaasDatabase() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Manage a database inside a managed-database (dbaas) cluster. Each database carries its own admin user; rotate the admin password by changing `admin_password`.",
 		ReadContext:   resourceDbaasDatabaseRead,
 		CreateContext: resourceDbaasDatabaseCreate,

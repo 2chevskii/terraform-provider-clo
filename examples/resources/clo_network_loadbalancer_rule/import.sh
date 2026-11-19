@@ -1,0 +1,1 @@
+terraform import clo_network_loadbalancer_rule.example RULE_ID

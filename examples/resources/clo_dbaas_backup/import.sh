@@ -1,0 +1,1 @@
+terraform import clo_dbaas_backup.example BACKUP_ID

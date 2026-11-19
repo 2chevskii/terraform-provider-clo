@@ -1,0 +1,1 @@
+terraform import clo_compute_snapshot_restore.example SNAPSHOT_ID/RESTORED_INSTANCE_ID

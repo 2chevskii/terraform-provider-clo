@@ -22,17 +22,7 @@ func resourceInstanceLicense() *schema.Resource {
 			"created_in": computedField(schema.TypeString), "activated_in": computedField(schema.TypeString),
 		},
 		Timeouts: &schema.ResourceTimeout{Default: schema.DefaultTimeout(20 * time.Minute)},
-		Importer: &schema.ResourceImporter{StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-			server, id, ok := strings.Cut(d.Id(), "/")
-			if !ok || server == "" || id == "" {
-				return nil, fmt.Errorf("expected instance_id/license_id")
-			}
-			if err := d.Set("instance_id", server); err != nil {
-				return nil, err
-			}
-			d.SetId(id)
-			return []*schema.ResourceData{d}, nil
-		}},
+		Importer: scopedImporter("instance_id"),
 		CreateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 			cli := m.(*providerMeta).v3
 			value := configuredInt(d, "value")

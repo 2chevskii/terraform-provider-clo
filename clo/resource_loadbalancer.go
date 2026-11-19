@@ -30,6 +30,7 @@ const (
 
 func resourceLoadBalancer() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Manage a load balancer in the project. `enabled` toggles the balancer's power state (start/stop).",
 		ReadContext:   resourceLoadBalancerRead,
 		CreateContext: resourceLoadBalancerCreate,

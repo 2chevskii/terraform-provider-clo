@@ -129,4 +129,10 @@ Optional:
 - `read` (String)
 - `update` (String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+terraform import clo_dbaas_cluster.example CLUSTER_ID
+```

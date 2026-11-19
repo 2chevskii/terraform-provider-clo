@@ -32,6 +32,7 @@ const (
 
 func resourceDbaasCluster() *schema.Resource {
 	return &schema.Resource{
+		Importer:      &schema.ResourceImporter{StateContext: schema.ImportStatePassthroughContext},
 		Description:   "Manage a managed-database (dbaas) cluster in the project. `enabled` toggles the cluster's power state (start/stop). Databases are managed with the separate `clo_dbaas_database` resource.",
 		ReadContext:   resourceDbaasClusterRead,
 		CreateContext: resourceDbaasClusterCreate,
