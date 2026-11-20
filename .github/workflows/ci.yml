@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event_name != 'push' || !github.event.deleted
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: Build provider
+        run: CGO_ENABLED=0 go build -mod=readonly -trimpath -o "$RUNNER_TEMP/terraform-provider-clo" .
+      - name: Test and vet
+        run: |
+          go test -mod=readonly ./...
+          go vet -mod=readonly ./...
+
+  publish:
+    needs: build
+    if: >-
+      github.repository == '2chevskii/terraform-provider-clo' &&
+      github.event_name == 'push' && github.ref_type == 'tag' && github.event.created
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: publish-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      OCI_REPOSITORY: ghcr.io/2chevskii/terraform-provider-clo
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release tag
+        shell: bash
+        run: |
+          number='(0|[1-9][0-9]*)'
+          identifier="($number|[0-9]*[A-Za-z-][0-9A-Za-z-]*)"
+          version=${GITHUB_REF_NAME#v}
+          if [[ ! $GITHUB_REF_NAME =~ ^v$number\.$number\.$number(-$identifier(\.$identifier)*)?$ || ${#version} -gt 128 ]]; then
+            echo 'Release tags must be vX.Y.Z or a SemVer prerelease without build metadata.' >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD refs/remotes/origin/main; then
+            echo 'The release tag must point to a commit in the history of main.' >&2
+            exit 1
+          fi
+          printf 'PROVIDER_VERSION=%s\nSOURCE_REVISION=%s\n' "$version" "$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - uses: oras-project/setup-oras@ac735097e22fe643015b0d19645f7c9a69942128 # v2.0.4
+        with:
+          version: 1.4.0
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: 1.13.9
+          tofu_wrapper: false
+      - name: Publish to GHCR
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s\n' "$GHCR_TOKEN" | oras login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          unset GHCR_TOKEN
+          bash .github/scripts/publish-provider.sh
+      - name: Install and load the published provider
+        shell: bash
+        run: |
+          working_dir=$(mktemp -d "$RUNNER_TEMP/clo-smoke.XXXXXX")
+          cd "$working_dir"
+          export TF_CLI_CONFIG_FILE="$working_dir/ci.tfrc"
+          cat > "$TF_CLI_CONFIG_FILE" <<EOF
+          provider_installation {
+            oci_mirror {
+              repository_template = "$OCI_REPOSITORY"
+              include             = ["registry.terraform.io/2chevskii/clo"]
+            }
+          }
+          EOF
+          cat > main.tf <<EOF
+          terraform {
+            required_providers {
+              clo = {
+                source  = "registry.terraform.io/2chevskii/clo"
+                version = "= $PROVIDER_VERSION"
+              }
+            }
+          }
+          EOF
+          tofu init -backend=false -input=false
+          tofu providers schema -json | jq -e '.provider_schemas["registry.terraform.io/2chevskii/clo"].data_source_schemas.clo_projects != null'
